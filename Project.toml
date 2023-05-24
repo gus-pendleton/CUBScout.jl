@@ -3,6 +3,12 @@ uuid = "5bb2324b-4f8a-4227-8185-e835854b0a1e"
 authors = ["Augustus Pendleton"]
 version = "1.0.0-DEV"
 
+[deps]
+BioSequences = "7e6ae17a-c86d-528c-b3b9-7f778a29fe59"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
+FASTX = "c2308a5c-f048-11e8-3e8a-31650f418d12"
+
 [compat]
 julia = "1.6"
 
