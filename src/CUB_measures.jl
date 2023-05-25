@@ -2,7 +2,7 @@
 
 using DataFrames: DataFrame
 
-function b(filepath::String, dict::codon_dict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
+function b(filepath::String, dict::codon_dict = default_codon_dict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
     if rm_stop
         uniqueI = dict.uniqueI_nostops
         stop_mask = dict.stop_mask
@@ -14,7 +14,7 @@ function b(filepath::String, dict::codon_dict; ref_seqs = (), rm_start = false, 
     return b(filepath, ref_seqs, uniqueI, stop_mask, rm_start, threshold, dataframe)
 end
 
-function b(filepaths::Vector{String}, dict::codon_dict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
+function b(filepaths::Vector{String}, dict::codon_dict = default_codon_dict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
     len = length(filepaths)
     results = Vector{Any}(undef, len)
     if rm_stop
@@ -74,7 +74,7 @@ function b(fasta_seq::String, ref_seqs, dict_uniqueI::Vector{Vector{Int32}}, sto
 end
 
 # ENC
-function enc(filepaths::String, dict::codon_dict; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
+function enc(filepaths::String, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
     if rm_stop
         uniqueI = dict.uniqueI_nostops
         deg = dict.deg_nostops
@@ -87,7 +87,7 @@ function enc(filepaths::String, dict::codon_dict; rm_start = false, rm_stop = fa
     return enc(filepaths, uniqueI, deg, stop_mask, rm_start, threshold, dataframe)
 end
 
-function enc(filepaths::Vector{String}, dict::codon_dict; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
+function enc(filepaths::Vector{String}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
     len = length(filepaths)
     results = Vector{Any}(undef, len)
     if rm_stop
@@ -122,7 +122,7 @@ function enc(fasta_seq::String, dict_uniqueI::Vector{Vector{Int32}}, dict_deg::V
 end
 
 # ENC Prime
-function enc_p(filepaths::String, dict::codon_dict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
+function enc_p(filepaths::String, dict::codon_dict = default_codon_dict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
     if rm_stop
         uniqueI = dict.uniqueI_nostops
         deg = dict.deg_nostops
@@ -135,7 +135,7 @@ function enc_p(filepaths::String, dict::codon_dict; ref_seqs = (), rm_start = fa
     return enc_p(filepaths, ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold, dataframe)
 end
 
-function enc_p(filepaths::Vector{String}, dict::codon_dict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
+function enc_p(filepaths::Vector{String}, dict::codon_dict = default_codon_dict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
     len = length(filepaths)
     results = Vector{Any}(undef, len)
     if rm_stop
@@ -199,7 +199,7 @@ function enc_p(fasta_seq::String, ref_seqs, dict_uniqueI::Vector{Vector{Int32}},
 end
 
 # MCB 
-function mcb(filepaths::String, dict::codon_dict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
+function mcb(filepaths::String, dict::codon_dict = default_codon_dict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
     if rm_stop
         uniqueI = dict.uniqueI_nostops
         deg = dict.deg_nostops
@@ -212,7 +212,7 @@ function mcb(filepaths::String, dict::codon_dict; ref_seqs = (), rm_start = fals
     return mcb(filepaths, ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold, dataframe)
 end
 
-function mcb(filepaths::Vector{String}, dict::codon_dict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80, dataframe)
+function mcb(filepaths::Vector{String}, dict::codon_dict = default_codon_dict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80, dataframe)
     len = length(filepaths)
     results = Vector{Any}(undef, len)
     if rm_stop
@@ -281,7 +281,7 @@ function mcb(fasta_seq::String, ref_seqs, dict_uniqueI::Vector{Vector{Int32}}, d
 end
 
 # MILC
-function milc(filepaths::String, dict::codon_dict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
+function milc(filepaths::String, dict::codon_dict = default_codon_dict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
     if rm_stop
         uniqueI = dict.uniqueI_nostops
         deg = dict.deg_nostops
@@ -294,7 +294,7 @@ function milc(filepaths::String, dict::codon_dict; ref_seqs = (), rm_start = fal
     return milc(filepaths, ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold, dataframe)
 end
 
-function milc(filepaths::Vector{String}, dict::codon_dict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
+function milc(filepaths::Vector{String}, dict::codon_dict = default_codon_dict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
     len = length(filepaths)
     results = Vector{Any}(undef, len)
     if rm_stop
@@ -355,7 +355,7 @@ function milc(fasta_seq::String, ref_seqs, dict_uniqueI::Vector{Vector{Int32}}, 
 end
 
 # SCUO
-function scuo(filepaths::String, dict::codon_dict; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
+function scuo(filepaths::String, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
     if rm_stop
         uniqueI = dict.uniqueI_nostops
         deg = dict.deg_nostops
@@ -368,7 +368,7 @@ function scuo(filepaths::String, dict::codon_dict; rm_start = false, rm_stop = f
     return scuo(filepaths, uniqueI, deg, stop_mask, rm_start, threshold, dataframe)
 end
 
-function scuo(filepaths::Vector{String}, dict::codon_dict; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
+function scuo(filepaths::Vector{String}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
     len = length(filepaths)
     results = Vector{Vector{Float64}}(undef, len)
     if rm_stop
@@ -411,10 +411,10 @@ function scuo(fasta_seq::String, dict_uniqueI::Vector{Vector{Int32}}, dict_deg::
     dataframe && return DataFrame(SCUO = res, Identifier = names, File = fasta_seq)
     return res
 end
-scuo(path, default_dict, dataframe = true)
 
 
-function all_cub(filepaths::String, dict::codon_dict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
+
+function all_cub(filepaths::String, dict::codon_dict = default_codon_dict = default_codon_dict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
     if rm_stop
         uniqueI = dict.uniqueI_nostops
         deg = dict.deg_nostops
@@ -427,7 +427,7 @@ function all_cub(filepaths::String, dict::codon_dict; ref_seqs = (), rm_start = 
     return all_cub(filepaths, ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold, dataframe)
 end
 
-function all_cub(filepaths::Vector{String}, dict::codon_dict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80, dataframe)
+function all_cub(filepaths::Vector{String}, dict::codon_dict = default_codon_dict = default_codon_dict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80, dataframe)
     len = length(filepaths)
     results = Vector{Any}(undef, len)
     if rm_stop

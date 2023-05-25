@@ -1,0 +1,20 @@
+[codon_dict]
+git-tree-sha1 = "7c4054a01585c08dd5eeae1a2173bdfd7faa0391"
+
+    [[codon_dict.download]]
+    sha256 = "75011304b3656aa2eff1be4637e8685120db04886ab6d0734658e7db2eec5a04"
+    url = "https://gist.github.com/gus-pendleton/414bd4b0eaa37e149b044fa32e762188/raw/7c4054a01585c08dd5eeae1a2173bdfd7faa0391.tar.gz"
+
+[codon_dict_altstart]
+git-tree-sha1 = "580ea4c5bb0a6d93595e85647e3b39057d3a06b3"
+
+    [[codon_dict_altstart.download]]
+    sha256 = "a2d9c7655cd225cf555a95d983f04fb95763d436ff1ed9c6165e3d2c0f3f3137"
+    url = "https://gist.github.com/gus-pendleton/3207518897b700623c26c22dae94da32/raw/580ea4c5bb0a6d93595e85647e3b39057d3a06b3.tar.gz"
+
+[example_genome]
+git-tree-sha1 = "59b12ada16d30eeb06630e92e39d031fea285d93"
+
+    [[example_genome.download]]
+    sha256 = "412014a60557532478f1f9be7d5980d67974c3b30e0712ee7423ecc39b8d8fb6"
+    url = "https://gist.github.com/gus-pendleton/d9a157510e914a5f7c40a08b8bbc113e/raw/59b12ada16d30eeb06630e92e39d031fea285d93.tar.gz"
