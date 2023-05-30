@@ -51,11 +51,11 @@ julia> fieldnames(codon_dict)
 function make_codon_dict(filepath::AbstractString, delimiter::AbstractChar = '\t')
     cod_mat = readdlm(filepath, delimiter)
     alph_cod_mat = sortslices(cod_mat,dims=1,by=x->x[1],rev=false) # Alphabetize codons
-    uniqueAA = unique(alph_cod_mat[:,2])
+    uniqueAA = unique(alph_cod_mat[:,2]) # Find unique amino acid names
     stop = map(x->occursin(r"Stop|stop|STOP|\*", x), alph_cod_mat[:,2]) # Search for stop codons
-    AA_nostops = alph_cod_mat[.!stop,2]
-    uniqueAA_nostops = unique(AA_nostops)
-    indices = [findall(alph_cod_mat[:,2] .== aa) for aa in uniqueAA]
+    AA_nostops = alph_cod_mat[.!stop,2] # Filter out stops
+    uniqueAA_nostops = unique(AA_nostops) # Filter out stops
+    indices = [findall(alph_cod_mat[:,2] .== aa) for aa in uniqueAA] # Find codon indices for each 
     indices_nostops = [findall(AA_nostops .== aa) for aa in uniqueAA_nostops]
     codon_dict(
         LongDNA{2}.(alph_cod_mat[:,1]), 
@@ -77,4 +77,8 @@ const default_codon_dict = make_codon_dict(codon_dict_path)
 
 const altstart_codon_dict = make_codon_dict(joinpath(artifact"codon_dict_altstart", "codon_dict_altstart.txt"))
 
+"""
+    example_data_path
+The path to an example dataset, stored as an artifact within the package. This is an .fna file containing coding sequences from Bacillus subtilis subsp. subtilis str. 168, NCBI Accession # NC_000964.3.
+"""
 const example_data_path = joinpath(artifact"example_genome", "B_subtilis.fna")
