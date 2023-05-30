@@ -886,8 +886,45 @@ Calculate all codon usage bias measures at once. Because many measures require t
 - `dataframe`: whether to format output as a dataframe. By default results are returned as vectors or named tuples (if the measure uses reference subsets). Setting `dataframe = true` will instead output a dataframe, though at a slight performance cost.
 
 # Examples
+```jldoctest
+julia> all_cub(example_data_path) # Calculate all six codon usage measures on example dataset
+(B = (self = [0.20912699220973896, 0.3289759448740455, 0.22365336363593893, 0.5391135258658497, 0.24919594143501034, 0.2880358413249049, 0.31200964304415874, 0.34858035204347476, 0.2455189361074733, 0.4690734561271221  …  0.3629137353834403, 0.3621330537227321, 0.4535285720373026, 0.3357858047622507, 0.28183191395624935, 0.2668809561422238, 0.22381338105820905, 0.4034837015709619, 0.3594626865160133, 0.3724863965444541],), ENC = (ENC = [56.787282202547104, 52.725946690067296, 59.287948966886226, 52.29668642771212, 55.26298060679466, 53.44161579771853, 53.05664789279207, 52.0481893503424, 57.20652070751575, 44.663140238417824  …  45.29372394963511, 56.05080191311106, 58.21406301324846, 56.258765647523546, 60.10693676603753, 50.30390962534221, 56.29539618087172, 55.229391962859935, 52.58401385627267, 60.19275631834157],), ENCP = (self = [61.0, 59.36979815371983, 60.7494622549966, 61.0, 61.0, 56.353402323266224, 55.025304341802055, 57.30607996896261, 61.0, 49.80272180663614  …  58.275539315744126, 61.0, 58.28913535421893, 61.0, 61.0, 59.45750784609185, 61.0, 59.947884174402645, 59.43051836466144, 61.0],), MCB = (self = [0.08721123763355611, 0.17833660522736233, 0.18968222510423902, 0.2401197552240717, 0.14986851474968427, 0.2726565434395838, 0.2463076527192269, 0.21311734597718654, 0.12911296594333618, 0.33880929702119683  …  0.20493351356705938, 0.1315657625271143, 0.218615505877176, 0.1589526915862505, 0.11884772940321076, 0.16599279317487328, 0.09899721758865292, 0.20119392008973744, 0.2227777749890099, 0.14183390310488245],), MILC = (self = [0.49482573202153163, 0.5839439121281993, 0.49947166558087047, 0.6354929447434434, 0.5439352548027006, 0.6104721251245075, 0.6256398806438782, 0.6228376952086359, 0.5355298113407091, 0.7832276821181443  …  0.5968814155010973, 0.5964500002803941, 0.5930680822246766, 0.5412999510428169, 0.49866919389111675, 0.5830959504630727, 0.5139438478694085, 0.6164434557282711, 0.6018041071661588, 0.48775477465069617],), SCUO = (SCUO = [0.14312092935182216, 0.19123738759808445, 0.09632387849329298, 0.34521070127179804, 0.1057438762588421, 0.12037900551695478, 0.18385815287727708, 0.1664666302173014, 0.1250230978515499, 0.26111178459557927  …  0.24222582971568635, 0.18936014934691786, 0.2261902142070406, 0.13257602419177947, 0.1403154693937287, 0.1545378175732701, 0.10969625791871884, 0.1840696872016822, 0.15616118648954513, 0.23591385815130636],))
+
+julia> all_cub(example_data_path, dataframe = true) # Get output in dataframe format
+3801×8 DataFrame
+  Row │ self_B    ENC      self_ENCP  self_MCB   self_MILC  SCUO       Identifier                         File           ⋯
+      │ Float64   Float64  Float64    Float64    Float64    Float64    String                             String         ⋯
+──────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    1 │ 0.209127  56.7873    61.0     0.0872112   0.494826  0.143121   lcl|NC_000964.3_cds_NP_387882.1_1  /Users/augustu ⋯
+    2 │ 0.328976  52.7259    59.3698  0.178337    0.583944  0.191237   lcl|NC_000964.3_cds_NP_387883.1_2  /Users/augustu
+    3 │ 0.223653  59.2879    60.7495  0.189682    0.499472  0.0963239  lcl|NC_000964.3_cds_NP_387885.1_4  /Users/augustu
+    4 │ 0.539114  52.2967    61.0     0.24012     0.635493  0.345211   lcl|NC_000964.3_cds_NP_387886.2_5  /Users/augustu
+  ⋮   │    ⋮         ⋮         ⋮          ⋮          ⋮          ⋮                      ⋮                                 ⋱
+ 3799 │ 0.403484  55.2294    59.9479  0.201194    0.616443  0.18407    lcl|NC_000964.3_cds_NP_391983.1_…  /Users/augustu ⋯
+ 3800 │ 0.359463  52.584     59.4305  0.222778    0.601804  0.156161   lcl|NC_000964.3_cds_NP_391984.1_…  /Users/augustu
+ 3801 │ 0.372486  60.1928    61.0     0.141834    0.487755  0.235914   lcl|NC_000964.3_cds_NP_391985.1_…  /Users/augustu
+                                                                                            1 column and 3794 rows omitted
+
+
+julia> ribosomal_genes = find_seqs(example_data_path, r"ribosomal"); # Get a vector which is true for ribosomal genes
+
+julia> all_cub(example_data_path, ref_seqs = (ribosomal = ribosomal_genes,), dataframe = true) # Calculate all measures using ribosomal genes as a reference subset
+3801×8 DataFrame
+  Row │ ribosomal_B  ENC      ribosomal_ENCP  ribosomal_MCB  ribosomal_MILC  SCUO       Identifier                       ⋯
+      │ Float64      Float64  Float64         Float64        Float64         Float64    String                           ⋯
+──────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    1 │    0.274331  56.7873         61.0         0.142922         0.532406  0.143121   lcl|NC_000964.3_cds_NP_387882.1_ ⋯
+    2 │    0.32069   52.7259         58.8882      0.179081         0.579498  0.191237   lcl|NC_000964.3_cds_NP_387883.1_
+    3 │    0.255325  59.2879         56.4104      0.306192         0.541516  0.0963239  lcl|NC_000964.3_cds_NP_387885.1_
+    4 │    0.546493  52.2967         61.0         0.296251         0.668068  0.345211   lcl|NC_000964.3_cds_NP_387886.2_
+  ⋮   │      ⋮          ⋮           ⋮               ⋮              ⋮             ⋮                      ⋮                ⋱
+ 3799 │    0.406673  55.2294         56.5325      0.239881         0.636678  0.18407    lcl|NC_000964.3_cds_NP_391983.1_ ⋯
+ 3800 │    0.375857  52.584          55.6687      0.260092         0.623519  0.156161   lcl|NC_000964.3_cds_NP_391984.1_
+ 3801 │    0.437981  60.1928         61.0         0.197456         0.551733  0.235914   lcl|NC_000964.3_cds_NP_391985.1_
+                                                                                           2 columns and 3794 rows omitted
+```
 """
-function all_cub(filepath::String, dict::codon_dict = default_codon_dict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
+function all_cub(filepath::String, dict = default_codon_dict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
     if rm_stop
         uniqueI = dict.uniqueI_nostops
         deg = dict.deg_nostops
@@ -900,7 +937,7 @@ function all_cub(filepath::String, dict::codon_dict = default_codon_dict; ref_se
     return all_cub(filepath, ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold, dataframe)
 end
 
-function all_cub(filepaths::Vector{String}, dict::codon_dict = default_codon_dict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80, dataframe)
+function all_cub(filepaths::Vector{String}, dict = default_codon_dict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80, dataframe)
     len = length(filepaths)
     results = Vector{Any}(undef, len)
     if rm_stop
