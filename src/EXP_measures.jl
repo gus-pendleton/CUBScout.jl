@@ -1,7 +1,7 @@
 
 
-function melp(filepaths::String, dict::codon_dict, ref_vector::Vector{Bool}; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
-    milcs = milc(filepaths, dict, ref_seqs = (self = fill(true, length(ref_vector)), reference = ref_vector), rm_start = rm_start, rm_stop = rm_stop, threshold = threshold, dataframe = dataframe)
+function melp(filepath::String, ref_vector::Vector{Bool}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
+    milcs = milc(filepath, dict, ref_seqs = (self = fill(true, length(ref_vector)), reference = ref_vector), rm_start = rm_start, rm_stop = rm_stop, threshold = threshold, dataframe = dataframe)
     
     if dataframe
     milcs[!,:MELP] = milcs[!,:self] ./ milcs[!,:reference]
@@ -11,8 +11,20 @@ function melp(filepaths::String, dict::codon_dict, ref_vector::Vector{Bool}; rm_
     return @. milcs.self / milcs.reference
 end
 
-function e(filepaths::String, dict::codon_dict, ref_vector::Vector{Bool}; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
-    bs = b(filepaths, dict, ref_seqs = (self = fill(true, length(ref_vector)), reference = ref_vector), rm_start = rm_start, rm_stop = rm_stop, threshold = threshold, dataframe = dataframe)
+function melp(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
+    ref_tuples = map(x->(self = fill(true, length(x)), reference = x), ref_vectors)
+    milcs = milc(filepaths, dict, ref_seqs = ref_tuples, rm_start = rm_start, rm_stop = rm_stop, threshold = threshold, dataframe = dataframe)
+
+    if dataframe
+    milcs[!,:MELP] = milcs[!,:self] ./ milcs[!,:reference]
+    return milcs
+    end
+
+    return map(x->x.self ./ x.reference, milcs)
+end
+
+function e(filepath::String, dict::codon_dict, ref_vector::Vector{Bool}; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
+    bs = b(filepath, dict, ref_seqs = (self = fill(true, length(ref_vector)), reference = ref_vector), rm_start = rm_start, rm_stop = rm_stop, threshold = threshold, dataframe = dataframe)
     
     if dataframe
     bs[!,:E] = bs[!,:self] ./ bs[!,:reference]
@@ -22,8 +34,19 @@ function e(filepaths::String, dict::codon_dict, ref_vector::Vector{Bool}; rm_sta
     return @. bs.self / bs.reference
 end
 
+function e(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
+    ref_tuples = map(x->(self = fill(true, length(x)), reference = x), ref_vectors)
+    bs = b(filepaths, dict, ref_seqs = ref_tuples, rm_start = rm_start, rm_stop = rm_stop, threshold = threshold, dataframe = dataframe)
 
-function cai(filepaths::String, dict::codon_dict, ref_vector::Vector{Bool}; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
+    if dataframe
+    bs[!,:MELP] = bs[!,:self] ./ bs[!,:reference]
+    return bs
+    end
+
+    return map(x->x.self ./ x.reference, bs)
+end
+
+function cai(filepath::String, dict::codon_dict, ref_vector::Vector{Bool}; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
     if rm_stop
         uniqueI = dict.uniqueI_nostops
         deg = dict.deg_nostops
@@ -35,7 +58,7 @@ function cai(filepaths::String, dict::codon_dict, ref_vector::Vector{Bool}; rm_s
         stop_mask = fill(true,64)
         aa_names = dict.AA
     end
-    return cai(filepaths, ref_vector, uniqueI, deg, stop_mask, aa_names, rm_start, threshold, dataframe)
+    return cai(filepath, ref_vector, uniqueI, deg, stop_mask, aa_names, rm_start, threshold, dataframe)
 end
 
 function cai(filepaths::Vector{String}, dict::codon_dict, ref_vectors; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
@@ -89,7 +112,7 @@ end
 
 
 # FOP
-function fop(filepaths::String, dict::codon_dict, ref_vector::Vector{Bool}; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
+function fop(filepath::String, dict::codon_dict, ref_vector::Vector{Bool}; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
     if rm_stop
         uniqueI = dict.uniqueI_nostops
         deg = dict.deg_nostops
@@ -101,7 +124,7 @@ function fop(filepaths::String, dict::codon_dict, ref_vector::Vector{Bool}; rm_s
         stop_mask = fill(true,64)
         aa_names = dict.AA
     end
-    return fop(filepaths, ref_vector, uniqueI, deg, stop_mask, aa_names, rm_start, threshold, dataframe)
+    return fop(filepath, ref_vector, uniqueI, deg, stop_mask, aa_names, rm_start, threshold, dataframe)
 end
 
 function fop(filepaths::Vector{String}, dict::codon_dict, ref_vectors; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
@@ -157,7 +180,7 @@ function fop(fasta_seq::String, ref_vector::Vector{Bool}, dict_uniqueI::Vector{V
 end
 
 # Finally, GCB
-function gcb(filepaths::String, dict::codon_dict; refs = [], perc = 0.05, rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
+function gcb(filepath::String, dict::codon_dict; refs = [], perc = 0.05, rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
     if rm_stop
         uniqueI = dict.uniqueI_nostops
         stop_mask = dict.stop_mask
@@ -165,7 +188,7 @@ function gcb(filepaths::String, dict::codon_dict; refs = [], perc = 0.05, rm_sta
         uniqueI = dict.uniqueI
         stop_mask = fill(true,64)
     end
-    return gcb(filepaths, refs, uniqueI, perc, stop_mask, rm_start, threshold,dataframe)
+    return gcb(filepath, refs, uniqueI, perc, stop_mask, rm_start, threshold,dataframe)
 end
 
 function gcb(filepaths::Vector{String}, dict::codon_dict; refs = [], perc = 0.05, rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
