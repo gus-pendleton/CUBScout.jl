@@ -12,7 +12,7 @@ Calculate B from Karlin and Mrazek, 1996.
 - `rm_start`: whether to ignore the first codon of each sequence. Many organisms use alternative start codons such as TTG and CTG, which in other locations would generally code for leucine. There are a few approaches to deal with this. By default, `CUBScout` keeps each start codon and assigns it as though it were any other codon. Of course, this would slightly change leucine's contribution to codon usage bias. If you set `rm_start` to `true`, the first codon of every sequence is simply discarded. This will also affect the gene's length, which means it could be removed if it falls under the threshold. Other CUB packages (such as R's coRdon, alt.init = TRUE), assign all TTG and CTG codons to methionine, regardless of their location. I disagree with this approach from a biological perspective; those codons still code for leucine most of the time they are used. However, if you want matching output as you would get from coRdon, you can supply `altstart_codon_dict` to the `dict` argument, and keep `rm_start` as `false`.
 - `rm_stop`: whether to remove stop codons from calculations of codon usage bias.
 - `threshold`: minimum length of a gene (in codons) to be used in codon usage bias calculations. By default this is set to 80 codons; any genes less than or equal to that length are discarded. If you want no genes discarded, set `threshold` to 0.
-- `dataframe`: whether to format output as a dataframe. By default results are returned as vectors or named tuples (if the measure uses reference subsets). Setting `dataframe = true` will instead output a dataframe, though at a slight performance cost.
+- `dataframe`: whether to format output as a dataframe. By default results are returned as named tuples. Setting `dataframe = true` will instead output a dataframe, though at a slight performance cost.
 
 # Examples
 ```jldoctest
@@ -117,7 +117,7 @@ function b(fasta_seq::String, ref_seqs, dict_uniqueI::Vector{Vector{Int32}}, sto
          vec(sum(ba .* pa, dims = 1)) # Multiply ba by pa and sum for each gene sequence
     end
     dataframe && return (df = DataFrame(bs); df[!,:Identifier] = names; df[!,:File] .= fasta_seq; df) # Format in dataframe output, if dataframe = true
-    return bs
+    return (bs..., Identifier = names)
 end
 
 # ENC
@@ -133,13 +133,13 @@ Calculate ENC from Wright, 1990.
 - `rm_start`: whether to ignore the first codon of each sequence. Many organisms use alternative start codons such as TTG and CTG, which in other locations would generally code for leucine. There are a few approaches to deal with this. By default, `CUBScout` keeps each start codon and assigns it as though it were any other codon. Of course, this would slightly change leucine's contribution to codon usage bias. If you set `rm_start` to `true`, the first codon of every sequence is simply discarded. This will also affect the gene's length, which means it could be removed if it falls under the threshold. Other CUB packages (such as R's coRdon, alt.init = TRUE), assign all TTG and CTG codons to methionine, regardless of their location. I disagree with this approach from a biological perspective; those codons still code for leucine most of the time they are used. However, if you want matching output as you would get from coRdon, you can supply `altstart_codon_dict` to the `dict` argument, and keep `rm_start` as `false`.
 - `rm_stop`: whether to remove stop codons from calculations of codon usage bias.
 - `threshold`: minimum length of a gene (in codons) to be used in codon usage bias calculations. By default this is set to 80 codons; any genes less than or equal to that length are discarded. If you want no genes discarded, set `threshold` to 0.
-- `dataframe`: whether to format output as a dataframe. By default results are returned as vectors or named tuples (if the measure uses reference subsets). Setting `dataframe = true` will instead output a dataframe, though at a slight performance cost.
+- `dataframe`: whether to format output as a dataframe. By default results are returned as named tuples. Setting `dataframe = true` will instead output a dataframe, though at a slight performance cost.
 
 # Examples
 ```jldoctest
 julia> result = enc(example_data_path); # Run ENC on example dataset
 
-julia> round.(result[1:5], digits = 6)
+julia> round.(result.ENC[1:5], digits = 6)
 5-element Vector{Float64}:
  56.787282
  52.725947
@@ -149,10 +149,10 @@ julia> round.(result[1:5], digits = 6)
 
 julia> result_300 = enc(example_data_path, threshold = 300); # Increase threshold length
 
-julia> length(result)
+julia> length(result.ENC)
 3801
 
-julia> length(result_300)
+julia> length(result_300.ENC)
 1650
 
 julia> enc(example_data_path, altstart_codon_dict); # Code TTG and CTG as methionine
@@ -206,7 +206,7 @@ function enc(fasta_seq::String, dict_uniqueI::Vector{Vector{Int32}}, dict_deg::V
     fa[isnan.(fa)] .= 0.0 # Replace NaN with 0.0 (okay because will sum next)
     res = vec(eFFNc(fa, dict_deg)) # Calculate Nc for each gene
     dataframe && return DataFrame(ENC = res, Identifier = names, File = fasta_seq)
-    return res
+    return (ENC = res, Identifier = names)
 end
 
 # ENC Prime
@@ -223,7 +223,7 @@ Calculate ENC' from Novembre, 2002.
 - `rm_start`: whether to ignore the first codon of each sequence. Many organisms use alternative start codons such as TTG and CTG, which in other locations would generally code for leucine. There are a few approaches to deal with this. By default, `CUBScout` keeps each start codon and assigns it as though it were any other codon. Of course, this would slightly change leucine's contribution to codon usage bias. If you set `rm_start` to `true`, the first codon of every sequence is simply discarded. This will also affect the gene's length, which means it could be removed if it falls under the threshold. Other CUB packages (such as R's coRdon, alt.init = TRUE), assign all TTG and CTG codons to methionine, regardless of their location. I disagree with this approach from a biological perspective; those codons still code for leucine most of the time they are used. However, if you want matching output as you would get from coRdon, you can supply `altstart_codon_dict` to the `dict` argument, and keep `rm_start` as `false`.
 - `rm_stop`: whether to remove stop codons from calculations of codon usage bias.
 - `threshold`: minimum length of a gene (in codons) to be used in codon usage bias calculations. By default this is set to 80 codons; any genes less than or equal to that length are discarded. If you want no genes discarded, set `threshold` to 0.
-- `dataframe`: whether to format output as a dataframe. By default results are returned as vectors or named tuples (if the measure uses reference subsets). Setting `dataframe = true` will instead output a dataframe, though at a slight performance cost.
+- `dataframe`: whether to format output as a dataframe. By default results are returned as named tuples. Setting `dataframe = true` will instead output a dataframe, though at a slight performance cost.
 
 # Examples
 ```jldoctest
@@ -333,7 +333,7 @@ function enc_p(fasta_seq::String, ref_seqs, dict_uniqueI::Vector{Vector{Int32}},
         end
         res = map(x->vec(eFFNc(x, dict_deg)), fas) # Calculate Nc
     dataframe && return (df = DataFrame(res); df[!,:Identifier] = names; df[!,:File] .= fasta_seq; df) # Return dataframe is dataframe = true
-    return res
+    return (res..., Identifier = names)
 end
 
 # MCB 
@@ -350,7 +350,7 @@ Calculate MCB from Urutia and Hurst, 2001.
 - `rm_start`: whether to ignore the first codon of each sequence. Many organisms use alternative start codons such as TTG and CTG, which in other locations would generally code for leucine. There are a few approaches to deal with this. By default, `CUBScout` keeps each start codon and assigns it as though it were any other codon. Of course, this would slightly change leucine's contribution to codon usage bias. If you set `rm_start` to `true`, the first codon of every sequence is simply discarded. This will also affect the gene's length, which means it could be removed if it falls under the threshold. Other CUB packages (such as R's coRdon, alt.init = TRUE), assign all TTG and CTG codons to methionine, regardless of their location. I disagree with this approach from a biological perspective; those codons still code for leucine most of the time they are used. However, if you want matching output as you would get from coRdon, you can supply `altstart_codon_dict` to the `dict` argument, and keep `rm_start` as `false`.
 - `rm_stop`: whether to remove stop codons from calculations of codon usage bias.
 - `threshold`: minimum length of a gene (in codons) to be used in codon usage bias calculations. By default this is set to 80 codons; any genes less than or equal to that length are discarded. If you want no genes discarded, set `threshold` to 0.
-- `dataframe`: whether to format output as a dataframe. By default results are returned as vectors or named tuples (if the measure uses reference subsets). Setting `dataframe = true` will instead output a dataframe, though at a slight performance cost.
+- `dataframe`: whether to format output as a dataframe. By default results are returned as named tuples. Setting `dataframe = true` will instead output a dataframe, though at a slight performance cost.
 
 # Examples
 ```jldoctest
@@ -465,7 +465,7 @@ function mcb(fasta_seq::String, ref_seqs, dict_uniqueI::Vector{Vector{Int32}}, d
         vec(sum(mat1, dims = 1) ./ sum(A, dims = 1))
     end
     dataframe && return (df = DataFrame(mcbs); df[!,:Identifier] = names; df[!,:File] .= fasta_seq; df)
-    return mcbs
+    return (mcbs..., Identifier = names)
 end
 
 # MILC
@@ -482,7 +482,7 @@ Calculate MILC from Supek and Vlahovicek, 2005.
 - `rm_start`: whether to ignore the first codon of each sequence. Many organisms use alternative start codons such as TTG and CTG, which in other locations would generally code for leucine. There are a few approaches to deal with this. By default, `CUBScout` keeps each start codon and assigns it as though it were any other codon. Of course, this would slightly change leucine's contribution to codon usage bias. If you set `rm_start` to `true`, the first codon of every sequence is simply discarded. This will also affect the gene's length, which means it could be removed if it falls under the threshold. Other CUB packages (such as R's coRdon, alt.init = TRUE), assign all TTG and CTG codons to methionine, regardless of their location. I disagree with this approach from a biological perspective; those codons still code for leucine most of the time they are used. However, if you want matching output as you would get from coRdon, you can supply `altstart_codon_dict` to the `dict` argument, and keep `rm_start` as `false`.
 - `rm_stop`: whether to remove stop codons from calculations of codon usage bias.
 - `threshold`: minimum length of a gene (in codons) to be used in codon usage bias calculations. By default this is set to 80 codons; any genes less than or equal to that length are discarded. If you want no genes discarded, set `threshold` to 0.
-- `dataframe`: whether to format output as a dataframe. By default results are returned as vectors or named tuples (if the measure uses reference subsets). Setting `dataframe = true` will instead output a dataframe, though at a slight performance cost.
+- `dataframe`: whether to format output as a dataframe. By default results are returned as named tuples. Setting `dataframe = true` will instead output a dataframe, though at a slight performance cost.
 
 # Examples
 ```jldoctest
@@ -589,7 +589,7 @@ function milc(fasta_seq::String, ref_seqs, dict_uniqueI::Vector{Vector{Int32}}, 
         @views vec(([sum(ma, dims = 1)...] ./ lengths) .- cor) # Calculate MILC for each gene
     end
     dataframe && return (df = DataFrame(milcs); df[!,:Identifier] = names; df[!,:File] .= fasta_seq; df)
-    return milcs
+    return (milcs..., Identifier = names)
 end
 
 # SCUO
@@ -605,13 +605,13 @@ Calculate SCUO from Wan et al., 2004.
 - `rm_start`: whether to ignore the first codon of each sequence. Many organisms use alternative start codons such as TTG and CTG, which in other locations would generally code for leucine. There are a few approaches to deal with this. By default, `CUBScout` keeps each start codon and assigns it as though it were any other codon. Of course, this would slightly change leucine's contribution to codon usage bias. If you set `rm_start` to `true`, the first codon of every sequence is simply discarded. This will also affect the gene's length, which means it could be removed if it falls under the threshold. Other CUB packages (such as R's coRdon, alt.init = TRUE), assign all TTG and CTG codons to methionine, regardless of their location. I disagree with this approach from a biological perspective; those codons still code for leucine most of the time they are used. However, if you want matching output as you would get from coRdon, you can supply `altstart_codon_dict` to the `dict` argument, and keep `rm_start` as `false`.
 - `rm_stop`: whether to remove stop codons from calculations of codon usage bias.
 - `threshold`: minimum length of a gene (in codons) to be used in codon usage bias calculations. By default this is set to 80 codons; any genes less than or equal to that length are discarded. If you want no genes discarded, set `threshold` to 0.
-- `dataframe`: whether to format output as a dataframe. By default results are returned as vectors or named tuples (if the measure uses reference subsets). Setting `dataframe = true` will instead output a dataframe, though at a slight performance cost.
+- `dataframe`: whether to format output as a dataframe. By default results are returned as named tuples. Setting `dataframe = true` will instead output a dataframe, though at a slight performance cost.
 
 # Examples
 ```jldoctest
 julia> result = scuo(example_data_path); # Run SCUO on example dataset
 
-julia> round.(result[1:5], digits = 6)
+julia> round.(result.SCUO[1:5], digits = 6)
 5-element Vector{Float64}:
  0.143121
  0.191237
@@ -621,10 +621,10 @@ julia> round.(result[1:5], digits = 6)
 
 julia> result_300 = scuo(example_data_path, threshold = 300); # Increase threshold length
 
-julia> length(result)
+julia> length(result.SCUO)
 3801
 
-julia> length(result_300)
+julia> length(result_300.SCUO)
 1650
 
 julia> scuo(example_data_path, altstart_codon_dict); # Code TTG and CTG as methionine
@@ -688,7 +688,7 @@ function scuo(fasta_seq::String, dict_uniqueI::Vector{Vector{Int32}}, dict_deg::
 
     res =  vec(sum(mult, dims = 1))
     dataframe && return DataFrame(SCUO = res, Identifier = names, File = fasta_seq)
-    return res
+    return (SCUO = res, Identifier = names)
 end
 
 """
@@ -704,7 +704,7 @@ Calculate all codon usage bias measures at once. Because many measures require t
 - `rm_start`: whether to ignore the first codon of each sequence. Many organisms use alternative start codons such as TTG and CTG, which in other locations would generally code for leucine. There are a few approaches to deal with this. By default, `CUBScout` keeps each start codon and assigns it as though it were any other codon. Of course, this would slightly change leucine's contribution to codon usage bias. If you set `rm_start` to `true`, the first codon of every sequence is simply discarded. This will also affect the gene's length, which means it could be removed if it falls under the threshold. Other CUB packages (such as R's coRdon, alt.init = TRUE), assign all TTG and CTG codons to methionine, regardless of their location. I disagree with this approach from a biological perspective; those codons still code for leucine most of the time they are used. However, if you want matching output as you would get from coRdon, you can supply `altstart_codon_dict` to the `dict` argument, and keep `rm_start` as `false`.
 - `rm_stop`: whether to remove stop codons from calculations of codon usage bias.
 - `threshold`: minimum length of a gene (in codons) to be used in codon usage bias calculations. By default this is set to 80 codons; any genes less than or equal to that length are discarded. If you want no genes discarded, set `threshold` to 0.
-- `dataframe`: whether to format output as a dataframe. By default results are returned as vectors or named tuples (if the measure uses reference subsets). Setting `dataframe = true` will instead output a dataframe, though at a slight performance cost.
+- `dataframe`: whether to format output as a dataframe. By default results are returned as named tuples. Setting `dataframe = true` will instead output a dataframe, though at a slight performance cost.
 
 # Examples
 ```jldoctest
@@ -889,7 +889,7 @@ function all_cub(fasta_seq::String, ref_seqs, dict_uniqueI::Vector{Vector{Int32}
         scuo_df = DataFrame(SCUO_result) ; scuo_df[!,:Identifier] = seqnames; scuo_df[!,:File] .= fasta_seq
         return hcat(b_df, enc_df, encp_df, mcb_df, milc_df, scuo_df)
     end
-    return (B = B_result, ENC = ENC_result, ENCP = ENCP_result, MCB = MCB_result, MILC = MILC_result, SCUO = SCUO_result)
+    return (B = B_result, ENC = ENC_result, ENCP = ENCP_result, MCB = MCB_result, MILC = MILC_result, SCUO = SCUO_result, Identifier = seqnames)
 
 end
 

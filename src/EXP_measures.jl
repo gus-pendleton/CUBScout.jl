@@ -20,7 +20,7 @@ julia> ribosomal_genes = find_seqs(example_data_path, r"ribosomal"); # Get a vec
 
 julia> result = melp(example_data_path, ribosomal_genes); # Calculate MELP on example dataset
 
-julia> round.(result[1:5], digits = 6)
+julia> round.(result.MELP[1:5], digits = 6)
 5-element Vector{Float64}:
  0.929414
  1.007671
@@ -43,7 +43,7 @@ function melp(filepath::String, ref_vector::Vector{Bool}, dict::codon_dict = def
     return milcs
     end
 
-    return @. milcs.self / milcs.reference
+    return (MELP = milcs.self ./ milcs.reference, Identifier = milcs.Identifier)
 end
 
 function melp(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
@@ -55,7 +55,7 @@ function melp(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict
     return milcs
     end
 
-    return map(x->x.self ./ x.reference, milcs)
+    return map(x->(MELP = x.self ./ x.reference, x.Identifier), milcs)
 end
 
 """
@@ -79,7 +79,7 @@ julia> ribosomal_genes = find_seqs(example_data_path, r"ribosomal"); # Get a vec
 
 julia> result = e(example_data_path, ribosomal_genes); # Calculate E on example dataset
 
-julia> round.(result[1:5], digits = 6)
+julia> round.(result.E[1:5], digits = 6)
 5-element Vector{Float64}:
  0.762317
  1.025839
@@ -102,7 +102,7 @@ function e(filepath::String, ref_vector::Vector{Bool}, dict::codon_dict = defaul
     return bs
     end
 
-    return @. bs.self / bs.reference
+    return (E = bs.self ./ bs.reference, Identifier = bs.Identifier)
 end
 
 function e(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
@@ -114,7 +114,7 @@ function e(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::c
     return bs
     end
 
-    return map(x->x.self ./ x.reference, bs)
+    return map(x->(E = x.self ./ x.reference, Identifer = x.Identifier), bs)
 end
 
 """
@@ -138,7 +138,7 @@ julia> ribosomal_genes = find_seqs(example_data_path, r"ribosomal"); # Get a vec
 
 julia> result = cai(example_data_path, ribosomal_genes); # Calculate CAI on example dataset
 
-julia> round.(result[1:5], digits = 6)
+julia> round.(result.CAI[1:5], digits = 6)
 5-element Vector{Float64}:
  0.844967
  0.88548
@@ -214,7 +214,7 @@ function cai(fasta_seq::String, ref_vector::Vector{Bool}, dict_uniqueI::Vector{V
     mult = remove_nan.(mult,0)
     cai_result = vec(exp.(sum(mult, dims = 1) ./ sum(count_matrix, dims = 1)))
     dataframe && return DataFrame(CAI = cai_result, Identifier = names, File = fasta_seq)
-    return cai_result
+    return (CAI = cai_result, Identifier = names)
 end
 
 
@@ -239,7 +239,7 @@ julia> ribosomal_genes = find_seqs(example_data_path, r"ribosomal"); # Get a vec
 
 julia> result = fop(example_data_path, ribosomal_genes); # Calculate CAI on example dataset
 
-julia> round.(result[1:5], digits = 6)
+julia> round.(result.FOP[1:5], digits = 6)
 5-element Vector{Float64}:
  0.567816
  0.566845
@@ -317,7 +317,7 @@ function fop(fasta_seq::String, ref_vector::Vector{Bool}, dict_uniqueI::Vector{V
     count2[ra .< 0.9] .= 0
     fops = vec(sum(count2, dims = 1) ./ sum(count_matrix, dims = 1))
     dataframe && return DataFrame(FOP = fops, Identifier = names, File = fasta_seq)
-    return fops
+    return (FOP = fops, Identifier = names)
 
 end
 
@@ -343,7 +343,7 @@ julia> ribosomal_genes = find_seqs(example_data_path, r"ribosomal"); # Get a vec
 
 julia> result = gcb(example_data_path); # Calculate GCB on example dataset
 
-julia> round.(result[1:5], digits = 6)
+julia> round.(result.GCB[1:5], digits = 6)
 5-element Vector{Float64}:
  -0.058765
  -0.08659
@@ -353,7 +353,7 @@ julia> round.(result[1:5], digits = 6)
 
 julia> ribo_result = gcb(example_data_path, ref_vector = ribosomal_genes); # Calculate GCB with ribosomal genes as reference seed example dataset
 
-julia> round.(ribo_result[1:5], digits = 6)
+julia> round.(ribo_result.GCB[1:5], digits = 6)
 5-element Vector{Float64}:
  -0.135615
  -0.036687
@@ -379,7 +379,7 @@ function gcb(filepath::String, dict::codon_dict = default_codon_dict; ref_vector
     return gcb(filepath, ref_vector, uniqueI, perc, stop_mask, rm_start, threshold,dataframe)
 end
 
-function gcb(filepaths::Vector{String}, dict::codon_dict = default_codon_dict; ref_vector = [], perc = 0.05, rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
+function gcb(filepaths::Vector{String}, dict::codon_dict = default_codon_dict; ref_vectors = [], perc = 0.05, rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
     len = length(filepaths)
     results = Vector{Any}(undef, len)
     if rm_stop
@@ -389,13 +389,13 @@ function gcb(filepaths::Vector{String}, dict::codon_dict = default_codon_dict; r
         uniqueI = dict.uniqueI
         stop_mask = fill(true,64)
     end
-    if isempty(ref_vector)
+    if isempty(ref_vectors)
         Threads.@threads for i in 1:len
-           @inbounds results[i] = gcb(filepaths[i], ref_vector, uniqueI, perc, stop_mask, rm_start, threshold, dataframe)
+           @inbounds results[i] = gcb(filepaths[i], ref_vectors, uniqueI, perc, stop_mask, rm_start, threshold, dataframe)
             end
     else
             Threads.@threads for i in 1:len
-                @inbounds results[i] = gcb(filepaths[i], ref_vector[i], uniqueI, perc, stop_mask, rm_start, threshold, dataframe)
+                @inbounds results[i] = gcb(filepaths[i], ref_vectors[i], uniqueI, perc, stop_mask, rm_start, threshold, dataframe)
              end
     end
     dataframe && return reduce(vcat, results)
@@ -437,6 +437,6 @@ function gcb(fasta_seq::String, refs, dict_uniqueI, perc, stop_mask::Vector{Bool
         normsetfreq = normTotalFreq(count_matrix[:,seed], countAA[:,seed], dict_uniqueI)
     end
     dataframe && return DataFrame(GCB = gcb, Identifier = names, File = fasta_seq)
-    return gcb
+    return (GCB = gcb, Identifier = names)
 end
 

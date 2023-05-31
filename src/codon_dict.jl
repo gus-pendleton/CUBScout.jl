@@ -34,7 +34,7 @@ end
 
 """
     make_codon_dict(filepath::AbstractString, delimiter::AbstractChar = '\t')
-Make a custom codon dictionary for organisms with non-standard genetic code. `filepath` points to a delimited file with two columns and no header. the first column should be codons, and the second column their corresponding amino acid. Avoid spaces and special characters (e.g., write GlutamicAcid instead of Glutamic Acid). Stop codons can be coded as Stop, stop, STOP, or *. If delimited using any character outside of tab, supply the delimiter as the second argument as Char, not a string (e.g. `','` not `","`). `make_codon_dict` uses `readdlm` from `DelimitedFiles`; it's a good idea to check whether `readdlm` parses your file correctly before passing to `make_codon_dict`
+Make a custom codon dictionary for organisms with non-standard genetic code. `filepath` points to a delimited file with two columns and no header. The first column should be codons, and the second column their corresponding amino acid. Avoid spaces and special characters (e.g., write GlutamicAcid instead of Glutamic Acid). Stop codons can be coded as Stop, stop, STOP, or *. If delimited using any character outside of tab, supply the delimiter as the second argument as Char, not a string (e.g. `','` not `","`). `make_codon_dict` uses `readdlm` from `DelimitedFiles`; it's a good idea to check whether `readdlm` parses your file correctly before passing to `make_codon_dict`
 
 # Examples
 ```jldoctest
