@@ -16,7 +16,7 @@ Calculate B from Karlin and Mrazek, 1996.
 
 # Examples
 ```jldoctest
-julia> result = b(example_data_path); # Run B on example dataset
+julia> result = b(example_data_path); # Calculate measure on example dataset
 
 julia> result_300 = b(example_data_path, threshold = 300); # Increase threshold length
 
@@ -38,32 +38,15 @@ julia> b(example_data_path, altstart_codon_dict); # Code TTG and CTG as methioni
 
 julia> b(example_data_path, rm_start = true); # Remove start codons
 
-julia> res_df = b(example_data_path, dataframe = true); # Get output in dataframe format
-
-julia> first(res_df, 2)
-2×3 DataFrame
- Row │ self      Identifier                         File                              
-     │ Float64   String                             String                            
-─────┼────────────────────────────────────────────────────────────────────────────────
-   1 │ 0.209127  lcl|NC_000964.3_cds_NP_387882.1_1  /Users/augustuspendleton/.julia/…
-   2 │ 0.328976  lcl|NC_000964.3_cds_NP_387883.1_2  /Users/augustuspendleton/.julia/…
+julia> b(example_data_path, dataframe = true); # Get output in dataframe format
 
 julia> all_genes = find_seqs(example_data_path, r""); # Get a vector which is true for all genes
 
 julia> ribosomal_genes = find_seqs(example_data_path, r"ribosomal"); # Get a vector which is true for ribosomal genes
 
-julia> b(example_data_path, ref_seqs = (ribosomal = ribosomal_genes,), dataframe = true); # Calculate B using ribosomal genes as a reference subset
+julia> b(example_data_path, ref_seqs = (ribosomal = ribosomal_genes,), dataframe = true); # Calculate using ribosomal genes as a reference subset
 
-julia> res_ribo_df = b(example_data_path, ref_seqs = (self = all_genes, ribosomal = ribosomal_genes,), dataframe = true); # Calculate B using all genes and ribosomal genes as a reference subset
-
-julia> first(res_ribo_df, 2)
-2×4 DataFrame
- Row │ self      ribosomal  Identifier                         File                              
-     │ Float64   Float64    String                             String                            
-─────┼───────────────────────────────────────────────────────────────────────────────────────────
-   1 │ 0.209127   0.274331  lcl|NC_000964.3_cds_NP_387882.1_1  /Users/augustuspendleton/.julia/…
-   2 │ 0.328976   0.32069   lcl|NC_000964.3_cds_NP_387883.1_2  /Users/augustuspendleton/.julia/…
-
+julia> b(example_data_path, ref_seqs = (self = all_genes, ribosomal = ribosomal_genes,), dataframe = true); # Calculate using all genes and ribosomal genes as a reference subset
 ```
 """
 function b(filepath::String, dict::codon_dict = default_codon_dict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
@@ -154,20 +137,15 @@ Calculate ENC from Wright, 1990.
 
 # Examples
 ```jldoctest
-julia> result = enc(example_data_path) # Run ENC on example dataset
-3801-element Vector{Float64}:
+julia> result = enc(example_data_path); # Run SCUO on example dataset
+
+julia> first(result, 5)
+5-element Vector{Float64}:
  56.787282202547104
  52.725946690067296
  59.287948966886226
  52.29668642771212
  55.26298060679466
- 53.44161579771853
-  ⋮
- 50.30390962534221
- 56.29539618087172
- 55.229391962859935
- 52.58401385627267
- 60.19275631834157
 
 julia> result_300 = enc(example_data_path, threshold = 300); # Increase threshold length
 
@@ -177,35 +155,11 @@ julia> length(result)
 julia> length(result_300)
 1650
 
-julia> enc(example_data_path, altstart_codon_dict) # Use alternative start codons
-3801-element Vector{Float64}:
- 57.001523875733255
- 52.86344589270121
- 59.5010825383314
- 52.24194738136219
- 55.24666826718284
- 53.61982170502906
-  ⋮
- 50.35028822163096
- 56.28255588604824
- 54.240934927898564
- 52.24532168870545
- 60.12152034674111
+julia> enc(example_data_path, altstart_codon_dict); # Code TTG and CTG as methionine
 
-julia> enc(example_data_path, dataframe = true) # Get output in dataframe format
-3801×3 DataFrame
-  Row │ ENC      Identifier                         File                              
-      │ Float64  String                             String                            
-──────┼───────────────────────────────────────────────────────────────────────────────
-    1 │ 56.7873  lcl|NC_000964.3_cds_NP_387882.1_1  /Users/augustuspendleton/.julia/…
-    2 │ 52.7259  lcl|NC_000964.3_cds_NP_387883.1_2  /Users/augustuspendleton/.julia/…
-    3 │ 59.2879  lcl|NC_000964.3_cds_NP_387885.1_4  /Users/augustuspendleton/.julia/…
-    4 │ 52.2967  lcl|NC_000964.3_cds_NP_387886.2_5  /Users/augustuspendleton/.julia/…
-  ⋮   │    ⋮                     ⋮                                  ⋮
- 3799 │ 55.2294  lcl|NC_000964.3_cds_NP_391983.1_…  /Users/augustuspendleton/.julia/…
- 3800 │ 52.584   lcl|NC_000964.3_cds_NP_391984.1_…  /Users/augustuspendleton/.julia/…
- 3801 │ 60.1928  lcl|NC_000964.3_cds_NP_391985.1_…  /Users/augustuspendleton/.julia/…
-                                                                     3794 rows omitted
+julia> enc(example_data_path, rm_start = true); # Remove start codons
+
+julia> enc(example_data_path, dataframe = true); # Get output in dataframe format
 ```
 """
 function enc(filepath::String, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
@@ -273,8 +227,7 @@ Calculate ENC' from Novembre, 2002.
 
 # Examples
 ```jldoctest
-julia> result = enc_p(example_data_path) # Run ENC' on example dataset
-(self = [61.0, 59.36979815371983, 60.7494622549966, 61.0, 61.0, 56.353402323266224, 55.025304341802055, 57.30607996896261, 61.0, 49.80272180663614  …  58.275539315744126, 61.0, 58.28913535421893, 61.0, 61.0, 59.45750784609185, 61.0, 59.947884174402645, 59.43051836466144, 61.0],)
+julia> result = enc_p(example_data_path); # Calculate measure on example dataset
 
 julia> result_300 = enc_p(example_data_path, threshold = 300); # Increase threshold length
 
@@ -284,58 +237,27 @@ julia> length(result.self)
 julia> length(result_300.self)
 1650
 
-julia> enc_p(example_data_path, altstart_codon_dict) # Use alternative start codons
-(self = [61.0, 59.25393167941246, 60.451328058538294, 61.0, 61.0, 56.577935943942954, 55.48412223261298, 57.35814028261265, 61.0, 48.78039661159036  …  58.93889392717741, 61.0, 59.1935848198233, 61.0, 61.0, 59.587859071790746, 61.0, 58.81213890142517, 59.40548501932952, 61.0],)
+julia> first(result.self,5)
+5-element Vector{Float64}:
+ 61.0
+ 59.36979815371983
+ 60.7494622549966
+ 61.0
+ 61.0
 
-julia> enc_p(example_data_path, dataframe = true) # Get output in dataframe format
-3801×3 DataFrame
-  Row │ self     Identifier                         File                              
-      │ Float64  String                             String                            
-──────┼───────────────────────────────────────────────────────────────────────────────
-    1 │ 61.0     lcl|NC_000964.3_cds_NP_387882.1_1  /Users/augustuspendleton/.julia/…
-    2 │ 59.3698  lcl|NC_000964.3_cds_NP_387883.1_2  /Users/augustuspendleton/.julia/…
-    3 │ 60.7495  lcl|NC_000964.3_cds_NP_387885.1_4  /Users/augustuspendleton/.julia/…
-    4 │ 61.0     lcl|NC_000964.3_cds_NP_387886.2_5  /Users/augustuspendleton/.julia/…
-  ⋮   │    ⋮                     ⋮                                  ⋮
- 3799 │ 59.9479  lcl|NC_000964.3_cds_NP_391983.1_…  /Users/augustuspendleton/.julia/…
- 3800 │ 59.4305  lcl|NC_000964.3_cds_NP_391984.1_…  /Users/augustuspendleton/.julia/…
- 3801 │ 61.0     lcl|NC_000964.3_cds_NP_391985.1_…  /Users/augustuspendleton/.julia/…
-                                                                     3794 rows omitted
+julia> enc_p(example_data_path, altstart_codon_dict); # Code TTG and CTG as methionine
+
+julia> enc_p(example_data_path, rm_start = true); # Remove start codons
+
+julia> enc_p(example_data_path, dataframe = true); # Get output in dataframe format
 
 julia> all_genes = find_seqs(example_data_path, r""); # Get a vector which is true for all genes
 
 julia> ribosomal_genes = find_seqs(example_data_path, r"ribosomal"); # Get a vector which is true for ribosomal genes
 
-julia> enc_p(example_data_path, ref_seqs = (ribosomal = ribosomal_genes,), dataframe = true) # Calculate ENC' using ribosomal genes as a reference subset
-3801×3 DataFrame
-  Row │ ribosomal  Identifier                         File                              
-      │ Float64    String                             String                            
-──────┼─────────────────────────────────────────────────────────────────────────────────
-    1 │   61.0     lcl|NC_000964.3_cds_NP_387882.1_1  /Users/augustuspendleton/.julia/…
-    2 │   58.8882  lcl|NC_000964.3_cds_NP_387883.1_2  /Users/augustuspendleton/.julia/…
-    3 │   56.4104  lcl|NC_000964.3_cds_NP_387885.1_4  /Users/augustuspendleton/.julia/…
-    4 │   61.0     lcl|NC_000964.3_cds_NP_387886.2_5  /Users/augustuspendleton/.julia/…
-  ⋮   │     ⋮                      ⋮                                  ⋮
- 3799 │   56.5325  lcl|NC_000964.3_cds_NP_391983.1_…  /Users/augustuspendleton/.julia/…
- 3800 │   55.6687  lcl|NC_000964.3_cds_NP_391984.1_…  /Users/augustuspendleton/.julia/…
- 3801 │   61.0     lcl|NC_000964.3_cds_NP_391985.1_…  /Users/augustuspendleton/.julia/…
-                                                                       3794 rows omitted
+julia> enc_p(example_data_path, ref_seqs = (ribosomal = ribosomal_genes,), dataframe = true); # Calculate using ribosomal genes as a reference subset
 
-julia> enc_p(example_data_path, ref_seqs = (self = all_genes, ribosomal = ribosomal_genes,), dataframe = true) # Calculate ENC' using all genes and ribosomal genes as a reference subset
-3801×4 DataFrame
-  Row │ self     ribosomal  Identifier                         File                              
-      │ Float64  Float64    String                             String                            
-──────┼──────────────────────────────────────────────────────────────────────────────────────────
-    1 │ 61.0       61.0     lcl|NC_000964.3_cds_NP_387882.1_1  /Users/augustuspendleton/.julia/…
-    2 │ 59.3698    58.8882  lcl|NC_000964.3_cds_NP_387883.1_2  /Users/augustuspendleton/.julia/…
-    3 │ 60.7495    56.4104  lcl|NC_000964.3_cds_NP_387885.1_4  /Users/augustuspendleton/.julia/…
-    4 │ 61.0       61.0     lcl|NC_000964.3_cds_NP_387886.2_5  /Users/augustuspendleton/.julia/…
-  ⋮   │    ⋮         ⋮                      ⋮                                  ⋮
- 3799 │ 59.9479    56.5325  lcl|NC_000964.3_cds_NP_391983.1_…  /Users/augustuspendleton/.julia/…
- 3800 │ 59.4305    55.6687  lcl|NC_000964.3_cds_NP_391984.1_…  /Users/augustuspendleton/.julia/…
- 3801 │ 61.0       61.0     lcl|NC_000964.3_cds_NP_391985.1_…  /Users/augustuspendleton/.julia/…
-                                                                                3794 rows omitted
-                                                                       
+julia> enc_p(example_data_path, ref_seqs = (self = all_genes, ribosomal = ribosomal_genes,), dataframe = true); # Calculate using all genes and ribosomal genes as a reference subset
 ```
 """
 function enc_p(filepath::String, dict::codon_dict = default_codon_dict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
@@ -432,8 +354,7 @@ Calculate MCB from Urutia and Hurst, 2001.
 
 # Examples
 ```jldoctest
-julia> result = mcb(example_data_path) # Run MCB on example dataset
-(self = [0.08721123763355611, 0.17833660522736233, 0.18968222510423902, 0.2401197552240717, 0.14986851474968427, 0.2726565434395838, 0.2463076527192269, 0.21311734597718654, 0.12911296594333618, 0.33880929702119683  …  0.20493351356705938, 0.1315657625271143, 0.218615505877176, 0.1589526915862505, 0.11884772940321076, 0.16599279317487328, 0.09899721758865292, 0.20119392008973744, 0.2227777749890099, 0.14183390310488245],)
+julia> result = mcb(example_data_path); # Calculate measure on example dataset
 
 julia> result_300 = mcb(example_data_path, threshold = 300); # Increase threshold length
 
@@ -443,72 +364,27 @@ julia> length(result.self)
 julia> length(result_300.self)
 1650
 
-julia> mcb(example_data_path, altstart_codon_dict) # Use alternative start codons
-(self = [0.08395614019755322, 0.17886564496310903, 0.1843882189861458, 0.2327059977332034, 0.14375956626276776, 0.26153451676836, 0.2277560915069008, 0.2084721025526067, 0.12748812450452368, 0.35284946520551547  …  0.19412496858111208, 0.15378185701040462, 0.22664543233169301, 0.1572460068164919, 0.12228357240597998, 0.16482459147152181, 0.09433344489896123, 0.2180785328818952, 0.22046000262742788, 0.14934890119286454],)
+julia> first(result.self,5)
+5-element Vector{Float64}:
+ 0.08721123763355611
+ 0.17833660522736233
+ 0.18968222510423902
+ 0.2401197552240717
+ 0.14986851474968427
 
-julia> mcb(example_data_path, dataframe = true) # Get output in dataframe format
-3801×3 DataFrame
-  Row │ self       Identifier                         File                              
-      │ Float64    String                             String                            
-──────┼─────────────────────────────────────────────────────────────────────────────────
-    1 │ 0.0872112  lcl|NC_000964.3_cds_NP_387882.1_1  /Users/augustuspendleton/.julia/…
-    2 │ 0.178337   lcl|NC_000964.3_cds_NP_387883.1_2  /Users/augustuspendleton/.julia/…
-    3 │ 0.189682   lcl|NC_000964.3_cds_NP_387885.1_4  /Users/augustuspendleton/.julia/…
-    4 │ 0.24012    lcl|NC_000964.3_cds_NP_387886.2_5  /Users/augustuspendleton/.julia/…
-  ⋮   │     ⋮                      ⋮                                  ⋮
- 3799 │ 0.201194   lcl|NC_000964.3_cds_NP_391983.1_…  /Users/augustuspendleton/.julia/…
- 3800 │ 0.222778   lcl|NC_000964.3_cds_NP_391984.1_…  /Users/augustuspendleton/.julia/…
- 3801 │ 0.141834   lcl|NC_000964.3_cds_NP_391985.1_…  /Users/augustuspendleton/.julia/…
-                                                                       3794 rows omitted
+julia> mcb(example_data_path, altstart_codon_dict); # Code TTG and CTG as methionine
+
+julia> mcb(example_data_path, rm_start = true); # Remove start codons
+
+julia> mcb(example_data_path, dataframe = true); # Get output in dataframe format
 
 julia> all_genes = find_seqs(example_data_path, r""); # Get a vector which is true for all genes
 
 julia> ribosomal_genes = find_seqs(example_data_path, r"ribosomal"); # Get a vector which is true for ribosomal genes
 
-julia> mcb(example_data_path, ref_seqs = (ribosomal = ribosomal_genes,), dataframe = true) # Calculate MCB using ribosomal genes as a reference subset
-3801×3 DataFrame
-  Row │ ribosomal  Identifier                         File                              
-      │ Float64    String                             String                            
-──────┼─────────────────────────────────────────────────────────────────────────────────
-    1 │ 0.142922   lcl|NC_000964.3_cds_NP_387882.1_1  /Users/augustuspendleton/.julia/…
-    2 │ 0.179081   lcl|NC_000964.3_cds_NP_387883.1_2  /Users/augustuspendleton/.julia/…
-    3 │ 0.306192   lcl|NC_000964.3_cds_NP_387885.1_4  /Users/augustuspendleton/.julia/…
-    4 │ 0.296251   lcl|NC_000964.3_cds_NP_387886.2_5  /Users/augustuspendleton/.julia/…
-  ⋮   │     ⋮                      ⋮                                  ⋮
- 3799 │ 0.239881   lcl|NC_000964.3_cds_NP_391983.1_…  /Users/augustuspendleton/.julia/…
- 3800 │ 0.260092   lcl|NC_000964.3_cds_NP_391984.1_…  /Users/augustuspendleton/.julia/…
- 3801 │ 0.197456   lcl|NC_000964.3_cds_NP_391985.1_…  /Users/augustuspendleton/.julia/…
-                                                                       3794 rows omitted
+julia> mcb(example_data_path, ref_seqs = (ribosomal = ribosomal_genes,), dataframe = true); # Calculate using ribosomal genes as a reference subset
 
-julia> mcb(example_data_path, ref_seqs = (self = all_genes, ribosomal = ribosomal_genes,), dataframe = true) # Calculate MCB using all genes and ribosomal genes as a reference subset
-3801×4 DataFrame
-  Row │ self       ribosomal  Identifier                         File                              
-      │ Float64    Float64    String                             String                            
-──────┼────────────────────────────────────────────────────────────────────────────────────────────
-    1 │ 0.0872112  0.142922   lcl|NC_000964.3_cds_NP_387882.1_1  /Users/augustuspendleton/.julia/…
-    2 │ 0.178337   0.179081   lcl|NC_000964.3_cds_NP_387883.1_2  /Users/augustuspendleton/.julia/…
-    3 │ 0.189682   0.306192   lcl|NC_000964.3_cds_NP_387885.1_4  /Users/augustuspendleton/.julia/…
-    4 │ 0.24012    0.296251   lcl|NC_000964.3_cds_NP_387886.2_5  /Users/augustuspendleton/.julia/…
-  ⋮   │     ⋮          ⋮                      ⋮                                  ⋮
- 3799 │ 0.201194   0.239881   lcl|NC_000964.3_cds_NP_391983.1_…  /Users/augustuspendleton/.julia/…
- 3800 │ 0.222778   0.260092   lcl|NC_000964.3_cds_NP_391984.1_…  /Users/augustuspendleton/.julia/…
- 3801 │ 0.141834   0.197456   lcl|NC_000964.3_cds_NP_391985.1_…  /Users/augustuspendleton/.julia/…
-                                                                                  3794 rows omitted
-
-julia> mcb(example_data_path, ref_seqs = (self = all_genes, ribosomal = ribosomal_genes,), dataframe = true) # Calculate MCB using all genes and ribosomal genes as a reference subset
-3801×4 DataFrame
-  Row │ self       ribosomal  Identifier                         File                              
-      │ Float64    Float64    String                             String                            
-──────┼────────────────────────────────────────────────────────────────────────────────────────────
-    1 │ 0.0872112  0.142922   lcl|NC_000964.3_cds_NP_387882.1_1  /Users/augustuspendleton/.julia/…
-    2 │ 0.178337   0.179081   lcl|NC_000964.3_cds_NP_387883.1_2  /Users/augustuspendleton/.julia/…
-    3 │ 0.189682   0.306192   lcl|NC_000964.3_cds_NP_387885.1_4  /Users/augustuspendleton/.julia/…
-    4 │ 0.24012    0.296251   lcl|NC_000964.3_cds_NP_387886.2_5  /Users/augustuspendleton/.julia/…
-  ⋮   │     ⋮          ⋮                      ⋮                                  ⋮
- 3799 │ 0.201194   0.239881   lcl|NC_000964.3_cds_NP_391983.1_…  /Users/augustuspendleton/.julia/…
- 3800 │ 0.222778   0.260092   lcl|NC_000964.3_cds_NP_391984.1_…  /Users/augustuspendleton/.julia/…
- 3801 │ 0.141834   0.197456   lcl|NC_000964.3_cds_NP_391985.1_…  /Users/augustuspendleton/.julia/…
-                                                                                  3794 rows omitted
+julia> mcb(example_data_path, ref_seqs = (self = all_genes, ribosomal = ribosomal_genes,), dataframe = true); # Calculate using all genes and ribosomal genes as a reference subset
 ```
 """
 function mcb(filepath::String, dict::codon_dict = default_codon_dict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
@@ -610,8 +486,7 @@ Calculate MILC from Super and Vlahovicek, 2005.
 
 # Examples
 ```jldoctest
-julia> result = milc(example_data_path) # Run MCB on example dataset
-(self = [0.49482573202153163, 0.5839439121281993, 0.49947166558087047, 0.6354929447434434, 0.5439352548027006, 0.6104721251245075, 0.6256398806438782, 0.6228376952086359, 0.5355298113407091, 0.7832276821181443  …  0.5968814155010973, 0.5964500002803941, 0.5930680822246766, 0.5412999510428169, 0.49866919389111675, 0.5830959504630727, 0.5139438478694085, 0.6164434557282711, 0.6018041071661588, 0.48775477465069617],)
+julia> result = milc(example_data_path); # Calculate measure on example dataset
 
 julia> result_300 = milc(example_data_path, threshold = 300); # Increase threshold length
 
@@ -621,59 +496,27 @@ julia> length(result.self)
 julia> length(result_300.self)
 1650
 
-julia> milc(example_data_path, altstart_codon_dict) # Use alternative start codons
-(self = [0.49430677065204015, 0.5885230358759501, 0.5025039496927455, 0.6371410353128949, 0.5426521549091665, 0.6108102890984481, 0.6217053122088902, 0.6248550493920512, 0.5375433930570145, 0.822162494240932  …  0.5865793308679926, 0.6188550398687176, 0.5942360103321869, 0.5420673855853781, 0.5054979526357374, 0.5824007342085071, 0.5121161561615022, 0.6308328736610525, 0.6146790189624615, 0.5061508729549385],)
+julia> first(result.self,5)
+5-element Vector{Float64}:
+ 0.49482573202153163
+ 0.5839439121281993
+ 0.49947166558087047
+ 0.6354929447434434
+ 0.5439352548027006
 
-julia> milc(example_data_path, dataframe = true) # Get output in dataframe format
-3801×3 DataFrame
-  Row │ self      Identifier                         File                              
-      │ Float64   String                             String                            
-──────┼────────────────────────────────────────────────────────────────────────────────
-    1 │ 0.494826  lcl|NC_000964.3_cds_NP_387882.1_1  /Users/augustuspendleton/.julia/…
-    2 │ 0.583944  lcl|NC_000964.3_cds_NP_387883.1_2  /Users/augustuspendleton/.julia/…
-    3 │ 0.499472  lcl|NC_000964.3_cds_NP_387885.1_4  /Users/augustuspendleton/.julia/…
-    4 │ 0.635493  lcl|NC_000964.3_cds_NP_387886.2_5  /Users/augustuspendleton/.julia/…
-  ⋮   │    ⋮                      ⋮                                  ⋮
- 3799 │ 0.616443  lcl|NC_000964.3_cds_NP_391983.1_…  /Users/augustuspendleton/.julia/…
- 3800 │ 0.601804  lcl|NC_000964.3_cds_NP_391984.1_…  /Users/augustuspendleton/.julia/…
- 3801 │ 0.487755  lcl|NC_000964.3_cds_NP_391985.1_…  /Users/augustuspendleton/.julia/…
-                                                                      3794 rows omitted
+julia> milc(example_data_path, altstart_codon_dict); # Code TTG and CTG as methionine
 
+julia> milc(example_data_path, rm_start = true); # Remove start codons
+
+julia> milc(example_data_path, dataframe = true); # Get output in dataframe format
 
 julia> all_genes = find_seqs(example_data_path, r""); # Get a vector which is true for all genes
 
 julia> ribosomal_genes = find_seqs(example_data_path, r"ribosomal"); # Get a vector which is true for ribosomal genes
 
-julia> milc(example_data_path, ref_seqs = (ribosomal = ribosomal_genes,), dataframe = true) # Calculate MILC using ribosomal genes as a reference subset
-3801×3 DataFrame
-  Row │ ribosomal  Identifier                         File                              
-      │ Float64    String                             String                            
-──────┼─────────────────────────────────────────────────────────────────────────────────
-    1 │  0.532406  lcl|NC_000964.3_cds_NP_387882.1_1  /Users/augustuspendleton/.julia/…
-    2 │  0.579498  lcl|NC_000964.3_cds_NP_387883.1_2  /Users/augustuspendleton/.julia/…
-    3 │  0.541516  lcl|NC_000964.3_cds_NP_387885.1_4  /Users/augustuspendleton/.julia/…
-    4 │  0.668068  lcl|NC_000964.3_cds_NP_387886.2_5  /Users/augustuspendleton/.julia/…
-  ⋮   │     ⋮                      ⋮                                  ⋮
- 3799 │  0.636678  lcl|NC_000964.3_cds_NP_391983.1_…  /Users/augustuspendleton/.julia/…
- 3800 │  0.623519  lcl|NC_000964.3_cds_NP_391984.1_…  /Users/augustuspendleton/.julia/…
- 3801 │  0.551733  lcl|NC_000964.3_cds_NP_391985.1_…  /Users/augustuspendleton/.julia/…
-                                                                       3794 rows omitted
+julia> milc(example_data_path, ref_seqs = (ribosomal = ribosomal_genes,), dataframe = true); # Calculate using ribosomal genes as a reference subset
 
-julia> milc(example_data_path, ref_seqs = (self = all_genes, ribosomal = ribosomal_genes,), dataframe = true) # Calculate MILC using all genes and ribosomal genes as a reference subset
-3801×4 DataFrame
-  Row │ self      ribosomal  Identifier                         File                              
-      │ Float64   Float64    String                             String                            
-──────┼───────────────────────────────────────────────────────────────────────────────────────────
-    1 │ 0.494826   0.532406  lcl|NC_000964.3_cds_NP_387882.1_1  /Users/augustuspendleton/.julia/…
-    2 │ 0.583944   0.579498  lcl|NC_000964.3_cds_NP_387883.1_2  /Users/augustuspendleton/.julia/…
-    3 │ 0.499472   0.541516  lcl|NC_000964.3_cds_NP_387885.1_4  /Users/augustuspendleton/.julia/…
-    4 │ 0.635493   0.668068  lcl|NC_000964.3_cds_NP_387886.2_5  /Users/augustuspendleton/.julia/…
-  ⋮   │    ⋮          ⋮                      ⋮                                  ⋮
- 3799 │ 0.616443   0.636678  lcl|NC_000964.3_cds_NP_391983.1_…  /Users/augustuspendleton/.julia/…
- 3800 │ 0.601804   0.623519  lcl|NC_000964.3_cds_NP_391984.1_…  /Users/augustuspendleton/.julia/…
- 3801 │ 0.487755   0.551733  lcl|NC_000964.3_cds_NP_391985.1_…  /Users/augustuspendleton/.julia/…
-                                                                                 3794 rows omitted
-
+julia> milc(example_data_path, ref_seqs = (self = all_genes, ribosomal = ribosomal_genes,), dataframe = true); # Calculate using all genes and ribosomal genes as a reference subset
 ```
 """
 function milc(filepath::String, dict::codon_dict = default_codon_dict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
@@ -766,20 +609,15 @@ Calculate SCUO from Wan et al., 2004.
 
 # Examples
 ```jldoctest
-julia> result = scuo(example_data_path) # Run SCUO on example dataset
-3801-element Vector{Float64}:
+julia> result = scuo(example_data_path); # Run SCUO on example dataset
+
+julia> first(result, 5)
+5-element Vector{Float64}:
  0.14312092935182216
  0.19123738759808445
  0.09632387849329298
  0.34521070127179804
  0.1057438762588421
- 0.12037900551695478
- ⋮
- 0.1545378175732701
- 0.10969625791871884
- 0.1840696872016822
- 0.15616118648954513
- 0.23591385815130636
 
 julia> result_300 = scuo(example_data_path, threshold = 300); # Increase threshold length
 
@@ -789,36 +627,11 @@ julia> length(result)
 julia> length(result_300)
 1650
 
-julia> scuo(example_data_path, altstart_codon_dict) # Use alternative start codons
-3801-element Vector{Float64}:
- 0.14286111587263958
- 0.19315278493814017
- 0.0966128845976179
- 0.3473543659821751
- 0.10792236840320082
- 0.12039525638448735
- ⋮
- 0.152064610300728
- 0.11200912387676948
- 0.18952246579743504
- 0.16473723774598686
- 0.24160824180945173
+julia> scuo(example_data_path, altstart_codon_dict); # Code TTG and CTG as methionine
 
-julia> scuo(example_data_path, dataframe = true) # Get output in dataframe format
-3801×3 DataFrame
-  Row │ SCUO       Identifier                         File                              
-      │ Float64    String                             String                            
-──────┼─────────────────────────────────────────────────────────────────────────────────
-    1 │ 0.143121   lcl|NC_000964.3_cds_NP_387882.1_1  /Users/augustuspendleton/.julia/…
-    2 │ 0.191237   lcl|NC_000964.3_cds_NP_387883.1_2  /Users/augustuspendleton/.julia/…
-    3 │ 0.0963239  lcl|NC_000964.3_cds_NP_387885.1_4  /Users/augustuspendleton/.julia/…
-    4 │ 0.345211   lcl|NC_000964.3_cds_NP_387886.2_5  /Users/augustuspendleton/.julia/…
-  ⋮   │     ⋮                      ⋮                                  ⋮
- 3799 │ 0.18407    lcl|NC_000964.3_cds_NP_391983.1_…  /Users/augustuspendleton/.julia/…
- 3800 │ 0.156161   lcl|NC_000964.3_cds_NP_391984.1_…  /Users/augustuspendleton/.julia/…
- 3801 │ 0.235914   lcl|NC_000964.3_cds_NP_391985.1_…  /Users/augustuspendleton/.julia/…
-                                                                       3794 rows omitted
+julia> scuo(example_data_path, rm_start = true); # Remove start codons
 
+julia> scuo(example_data_path, dataframe = true); # Get output in dataframe format
 ```
 """
 function scuo(filepath::String, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
@@ -895,41 +708,29 @@ Calculate all codon usage bias measures at once. Because many measures require t
 
 # Examples
 ```jldoctest
-julia> all_cub(example_data_path) # Calculate all six codon usage measures on example dataset
-(B = (self = [0.20912699220973896, 0.3289759448740455, 0.22365336363593893, 0.5391135258658497, 0.24919594143501034, 0.2880358413249049, 0.31200964304415874, 0.34858035204347476, 0.2455189361074733, 0.4690734561271221  …  0.3629137353834403, 0.3621330537227321, 0.4535285720373026, 0.3357858047622507, 0.28183191395624935, 0.2668809561422238, 0.22381338105820905, 0.4034837015709619, 0.3594626865160133, 0.3724863965444541],), ENC = (ENC = [56.787282202547104, 52.725946690067296, 59.287948966886226, 52.29668642771212, 55.26298060679466, 53.44161579771853, 53.05664789279207, 52.0481893503424, 57.20652070751575, 44.663140238417824  …  45.29372394963511, 56.05080191311106, 58.21406301324846, 56.258765647523546, 60.10693676603753, 50.30390962534221, 56.29539618087172, 55.229391962859935, 52.58401385627267, 60.19275631834157],), ENCP = (self = [61.0, 59.36979815371983, 60.7494622549966, 61.0, 61.0, 56.353402323266224, 55.025304341802055, 57.30607996896261, 61.0, 49.80272180663614  …  58.275539315744126, 61.0, 58.28913535421893, 61.0, 61.0, 59.45750784609185, 61.0, 59.947884174402645, 59.43051836466144, 61.0],), MCB = (self = [0.08721123763355611, 0.17833660522736233, 0.18968222510423902, 0.2401197552240717, 0.14986851474968427, 0.2726565434395838, 0.2463076527192269, 0.21311734597718654, 0.12911296594333618, 0.33880929702119683  …  0.20493351356705938, 0.1315657625271143, 0.218615505877176, 0.1589526915862505, 0.11884772940321076, 0.16599279317487328, 0.09899721758865292, 0.20119392008973744, 0.2227777749890099, 0.14183390310488245],), MILC = (self = [0.49482573202153163, 0.5839439121281993, 0.49947166558087047, 0.6354929447434434, 0.5439352548027006, 0.6104721251245075, 0.6256398806438782, 0.6228376952086359, 0.5355298113407091, 0.7832276821181443  …  0.5968814155010973, 0.5964500002803941, 0.5930680822246766, 0.5412999510428169, 0.49866919389111675, 0.5830959504630727, 0.5139438478694085, 0.6164434557282711, 0.6018041071661588, 0.48775477465069617],), SCUO = (SCUO = [0.14312092935182216, 0.19123738759808445, 0.09632387849329298, 0.34521070127179804, 0.1057438762588421, 0.12037900551695478, 0.18385815287727708, 0.1664666302173014, 0.1250230978515499, 0.26111178459557927  …  0.24222582971568635, 0.18936014934691786, 0.2261902142070406, 0.13257602419177947, 0.1403154693937287, 0.1545378175732701, 0.10969625791871884, 0.1840696872016822, 0.15616118648954513, 0.23591385815130636],))
+julia> all_cub_results = all_cub(example_data_path); # Calculate all six codon usage measures on example dataset
 
-julia> all_cub(example_data_path, dataframe = true) # Get output in dataframe format
-3801×8 DataFrame
-  Row │ self_B    ENC      self_ENCP  self_MCB   self_MILC  SCUO       Identifier                         File           ⋯
-      │ Float64   Float64  Float64    Float64    Float64    Float64    String                             String         ⋯
-──────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-    1 │ 0.209127  56.7873    61.0     0.0872112   0.494826  0.143121   lcl|NC_000964.3_cds_NP_387882.1_1  /Users/augustu ⋯
-    2 │ 0.328976  52.7259    59.3698  0.178337    0.583944  0.191237   lcl|NC_000964.3_cds_NP_387883.1_2  /Users/augustu
-    3 │ 0.223653  59.2879    60.7495  0.189682    0.499472  0.0963239  lcl|NC_000964.3_cds_NP_387885.1_4  /Users/augustu
-    4 │ 0.539114  52.2967    61.0     0.24012     0.635493  0.345211   lcl|NC_000964.3_cds_NP_387886.2_5  /Users/augustu
-  ⋮   │    ⋮         ⋮         ⋮          ⋮          ⋮          ⋮                      ⋮                                 ⋱
- 3799 │ 0.403484  55.2294    59.9479  0.201194    0.616443  0.18407    lcl|NC_000964.3_cds_NP_391983.1_…  /Users/augustu ⋯
- 3800 │ 0.359463  52.584     59.4305  0.222778    0.601804  0.156161   lcl|NC_000964.3_cds_NP_391984.1_…  /Users/augustu
- 3801 │ 0.372486  60.1928    61.0     0.141834    0.487755  0.235914   lcl|NC_000964.3_cds_NP_391985.1_…  /Users/augustu
-                                                                                            1 column and 3794 rows omitted
+julia> first(all_cub_results.B.self, 5)
+5-element Vector{Float64}:
+ 0.20912699220973896
+ 0.3289759448740455
+ 0.22365336363593893
+ 0.5391135258658497
+ 0.24919594143501034
 
+julia> first(all_cub_results.SCUO.SCUO, 5)
+5-element Vector{Float64}:
+ 0.14312092935182216
+ 0.19123738759808445
+ 0.09632387849329298
+ 0.34521070127179804
+ 0.1057438762588421
+
+julia> all_cub(example_data_path, dataframe = true); # Get output in dataframe format
 
 julia> ribosomal_genes = find_seqs(example_data_path, r"ribosomal"); # Get a vector which is true for ribosomal genes
 
-julia> all_cub(example_data_path, ref_seqs = (ribosomal = ribosomal_genes,), dataframe = true) # Calculate all measures using ribosomal genes as a reference subset
-3801×8 DataFrame
-  Row │ ribosomal_B  ENC      ribosomal_ENCP  ribosomal_MCB  ribosomal_MILC  SCUO       Identifier                       ⋯
-      │ Float64      Float64  Float64         Float64        Float64         Float64    String                           ⋯
-──────┼───────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-    1 │    0.274331  56.7873         61.0         0.142922         0.532406  0.143121   lcl|NC_000964.3_cds_NP_387882.1_ ⋯
-    2 │    0.32069   52.7259         58.8882      0.179081         0.579498  0.191237   lcl|NC_000964.3_cds_NP_387883.1_
-    3 │    0.255325  59.2879         56.4104      0.306192         0.541516  0.0963239  lcl|NC_000964.3_cds_NP_387885.1_
-    4 │    0.546493  52.2967         61.0         0.296251         0.668068  0.345211   lcl|NC_000964.3_cds_NP_387886.2_
-  ⋮   │      ⋮          ⋮           ⋮               ⋮              ⋮             ⋮                      ⋮                ⋱
- 3799 │    0.406673  55.2294         56.5325      0.239881         0.636678  0.18407    lcl|NC_000964.3_cds_NP_391983.1_ ⋯
- 3800 │    0.375857  52.584          55.6687      0.260092         0.623519  0.156161   lcl|NC_000964.3_cds_NP_391984.1_
- 3801 │    0.437981  60.1928         61.0         0.197456         0.551733  0.235914   lcl|NC_000964.3_cds_NP_391985.1_
-                                                                                           2 columns and 3794 rows omitted
+julia> all_cub(example_data_path, ref_seqs = (ribosomal = ribosomal_genes,), dataframe = true); # Calculate all measures using ribosomal genes as a reference subset
 ```
 """
 function all_cub(filepath::String, dict = default_codon_dict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
