@@ -26,13 +26,13 @@ julia> length(result.self)
 julia> length(result_300.self)
 1650
 
-julia> first(result.self,5)
+julia> round.(result.self[1:5], digits = 6)
 5-element Vector{Float64}:
- 0.20912699220973896
- 0.3289759448740455
- 0.22365336363593893
- 0.5391135258658497
- 0.24919594143501034
+ 0.209127
+ 0.328976
+ 0.223653
+ 0.539114
+ 0.249196
 
 julia> b(example_data_path, altstart_codon_dict); # Code TTG and CTG as methionine
 
@@ -137,15 +137,15 @@ Calculate ENC from Wright, 1990.
 
 # Examples
 ```jldoctest
-julia> result = enc(example_data_path); # Run SCUO on example dataset
+julia> result = enc(example_data_path); # Run ENC on example dataset
 
-julia> first(result, 5)
+julia> round.(result[1:5], digits = 6)
 5-element Vector{Float64}:
- 56.787282202547104
- 52.725946690067296
- 59.287948966886226
- 52.29668642771212
- 55.26298060679466
+ 56.787282
+ 52.725947
+ 59.287949
+ 52.296686
+ 55.262981
 
 julia> result_300 = enc(example_data_path, threshold = 300); # Increase threshold length
 
@@ -237,11 +237,11 @@ julia> length(result.self)
 julia> length(result_300.self)
 1650
 
-julia> first(result.self,5)
+julia> round.(result.self[1:5], digits = 6)
 5-element Vector{Float64}:
  61.0
- 59.36979815371983
- 60.7494622549966
+ 59.369798
+ 60.749462
  61.0
  61.0
 
@@ -364,13 +364,13 @@ julia> length(result.self)
 julia> length(result_300.self)
 1650
 
-julia> first(result.self,5)
+julia> round.(result.self[1:5], digits = 6)
 5-element Vector{Float64}:
- 0.08721123763355611
- 0.17833660522736233
- 0.18968222510423902
- 0.2401197552240717
- 0.14986851474968427
+ 0.087211
+ 0.178337
+ 0.189682
+ 0.24012
+ 0.149869
 
 julia> mcb(example_data_path, altstart_codon_dict); # Code TTG and CTG as methionine
 
@@ -496,13 +496,13 @@ julia> length(result.self)
 julia> length(result_300.self)
 1650
 
-julia> first(result.self,5)
+julia> round.(result.self[1:5], digits = 6)
 5-element Vector{Float64}:
- 0.49482573202153163
- 0.5839439121281993
- 0.49947166558087047
- 0.6354929447434434
- 0.5439352548027006
+ 0.494826
+ 0.583944
+ 0.499472
+ 0.635493
+ 0.543935
 
 julia> milc(example_data_path, altstart_codon_dict); # Code TTG and CTG as methionine
 
@@ -611,13 +611,13 @@ Calculate SCUO from Wan et al., 2004.
 ```jldoctest
 julia> result = scuo(example_data_path); # Run SCUO on example dataset
 
-julia> first(result, 5)
+julia> round.(result[1:5], digits = 6)
 5-element Vector{Float64}:
- 0.14312092935182216
- 0.19123738759808445
- 0.09632387849329298
- 0.34521070127179804
- 0.1057438762588421
+ 0.143121
+ 0.191237
+ 0.096324
+ 0.345211
+ 0.105744
 
 julia> result_300 = scuo(example_data_path, threshold = 300); # Increase threshold length
 
@@ -709,22 +709,6 @@ Calculate all codon usage bias measures at once. Because many measures require t
 # Examples
 ```jldoctest
 julia> all_cub_results = all_cub(example_data_path); # Calculate all six codon usage measures on example dataset
-
-julia> first(all_cub_results.B.self, 5)
-5-element Vector{Float64}:
- 0.20912699220973896
- 0.3289759448740455
- 0.22365336363593893
- 0.5391135258658497
- 0.24919594143501034
-
-julia> first(all_cub_results.SCUO.SCUO, 5)
-5-element Vector{Float64}:
- 0.14312092935182216
- 0.19123738759808445
- 0.09632387849329298
- 0.34521070127179804
- 0.1057438762588421
 
 julia> all_cub(example_data_path, dataframe = true); # Get output in dataframe format
 

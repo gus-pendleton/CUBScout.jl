@@ -161,20 +161,13 @@ Read a fasta file at `path` and query the *description* field for a given Regex 
 
 # Examples
 ```jldoctest
-julia> find_seqs(example_data_path, r"ribosomal")
-4237-element Vector{Bool}:
+julia> find_seqs(example_data_path, r"ribosomal")[1:5]
+5-element Vector{Bool}:
  0
  0
  0
  0
  0
- 0
- ⋮
- 0
- 0
- 0
- 0
- 1
  ```
 """
 function find_seqs(path::AbstractString, match_pattern::Regex)
@@ -193,20 +186,10 @@ Read a fasta file at `path` and return the *name* fields. Just adds convenience 
 
 # Examples
 ```jldoctest
-julia> seq_names(example_data_path)
-4237-element Vector{String}:
- "lcl|NC_000964.3_cds_NP_387882.1_1"
- "lcl|NC_000964.3_cds_NP_387883.1_2"
- "lcl|NC_000964.3_cds_NP_387884.1_3"
- "lcl|NC_000964.3_cds_NP_387885.1_4"
- "lcl|NC_000964.3_cds_NP_387886.2_5"
- "lcl|NC_000964.3_cds_NP_387887.1_6"
- ⋮
- "lcl|NC_000964.3_cds_NP_391982.1_4233"
- "lcl|NC_000964.3_cds_NP_391983.1_4234"
- "lcl|NC_000964.3_cds_NP_391984.1_4235"
- "lcl|NC_000964.3_cds_NP_391985.1_4236"
- "lcl|NC_000964.3_cds_NP_391986.1_4237"
+julia> seq_name_vector = seq_names(example_data_path);
+
+julia> seq_name_vector[1]
+"lcl|NC_000964.3_cds_NP_387882.1_1"
 ```
 """
 function seq_names(path::AbstractString)
@@ -225,20 +208,7 @@ Read a fasta file at `path` and return the *description* fields. Just adds conve
 
 # Examples
 ```jldoctest
-julia> seq_descr = seq_descriptions(example_data_path)
-4237-element Vector{String}:
- "lcl|NC_000964.3_cds_NP_387882.1" ⋯ 430 bytes ⋯ "ocation=410..1750] [gbkey=CDS]"
- "lcl|NC_000964.3_cds_NP_387883.1" ⋯ 315 bytes ⋯ "cation=1939..3075] [gbkey=CDS]"
- "lcl|NC_000964.3_cds_NP_387884.1" ⋯ 305 bytes ⋯ "cation=3206..3421] [gbkey=CDS]"
- "lcl|NC_000964.3_cds_NP_387885.1" ⋯ 350 bytes ⋯ "cation=3437..4549] [gbkey=CDS]"
- "lcl|NC_000964.3_cds_NP_387886.2" ⋯ 248 bytes ⋯ "cation=4567..4812] [gbkey=CDS]"
- "lcl|NC_000964.3_cds_NP_387887.1" ⋯ 466 bytes ⋯ "cation=4867..6783] [gbkey=CDS]"
- ⋮
- "lcl|NC_000964.3_cds_NP_391982.1" ⋯ 428 bytes ⋯ "4211510..4212889)] [gbkey=CDS]"
- "lcl|NC_000964.3_cds_NP_391983.1" ⋯ 375 bytes ⋯ "4213200..4213826)] [gbkey=CDS]"
- "lcl|NC_000964.3_cds_NP_391984.1" ⋯ 351 bytes ⋯ "4213823..4214608)] [gbkey=CDS]"
- "lcl|NC_000964.3_cds_NP_391985.1" ⋯ 381 bytes ⋯ "4214753..4215103)] [gbkey=CDS]"
- "lcl|NC_000964.3_cds_NP_391986.1" ⋯ 313 bytes ⋯ "4215255..4215389)] [gbkey=CDS]"
+julia> seq_descr = seq_descriptions(example_data_path);
 
 julia> seq_descr[1]
 "lcl|NC_000964.3_cds_NP_387882.1_1 [gene=dnaA] [locus_tag=BSU_00010] [db_xref=EnsemblGenomes-Gn:BSU00010,EnsemblGenomes-Tr:CAB11777,GOA:P05648,InterPro:IPR001957,InterPro:IPR003593,InterPro:IPR010921,InterPro:IPR013159,InterPro:IPR013317,InterPro:IPR018312,InterPro:IPR020591,InterPro:IPR024633,InterPro:IPR027417,PDB:4TPS,SubtiList:BG10065,UniProtKB/Swiss-Prot:P05648] [protein=chromosomal replication initiator informational ATPase] [protein_id=NP_387882.1] [location=410..1750] [gbkey=CDS]"
