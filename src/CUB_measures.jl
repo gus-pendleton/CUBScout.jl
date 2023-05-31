@@ -175,7 +175,13 @@ julia> result = enc(example_data_path) # Run ENC on example dataset
  59.287948966886226
  52.29668642771212
  55.26298060679466
-[...]
+ 53.44161579771853
+  ⋮
+ 50.30390962534221
+ 56.29539618087172
+ 55.229391962859935
+ 52.58401385627267
+ 60.19275631834157
 
 julia> result_300 = enc(example_data_path, threshold = 300); # Increase threshold length
 
@@ -192,7 +198,13 @@ julia> enc(example_data_path, altstart_codon_dict) # Use alternative start codon
  59.5010825383314
  52.24194738136219
  55.24666826718284
- [...]
+ 53.61982170502906
+  ⋮
+ 50.35028822163096
+ 56.28255588604824
+ 54.240934927898564
+ 52.24532168870545
+ 60.12152034674111
 
 julia> enc(example_data_path, dataframe = true) # Get output in dataframe format
 3801×3 DataFrame
@@ -776,7 +788,12 @@ julia> result = scuo(example_data_path) # Run SCUO on example dataset
  0.34521070127179804
  0.1057438762588421
  0.12037900551695478
-[...]
+ ⋮
+ 0.1545378175732701
+ 0.10969625791871884
+ 0.1840696872016822
+ 0.15616118648954513
+ 0.23591385815130636
 
 julia> result_300 = scuo(example_data_path, threshold = 300); # Increase threshold length
 
@@ -794,7 +811,12 @@ julia> scuo(example_data_path, altstart_codon_dict) # Use alternative start codo
  0.3473543659821751
  0.10792236840320082
  0.12039525638448735
- [...]
+ ⋮
+ 0.152064610300728
+ 0.11200912387676948
+ 0.18952246579743504
+ 0.16473723774598686
+ 0.24160824180945173
 
 julia> scuo(example_data_path, dataframe = true) # Get output in dataframe format
 3801×3 DataFrame

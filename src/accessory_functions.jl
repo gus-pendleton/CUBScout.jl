@@ -201,7 +201,12 @@ julia> seq_names(example_data_path)
  "lcl|NC_000964.3_cds_NP_387885.1_4"
  "lcl|NC_000964.3_cds_NP_387886.2_5"
  "lcl|NC_000964.3_cds_NP_387887.1_6"
-[...]
+ ⋮
+ "lcl|NC_000964.3_cds_NP_391982.1_4233"
+ "lcl|NC_000964.3_cds_NP_391983.1_4234"
+ "lcl|NC_000964.3_cds_NP_391984.1_4235"
+ "lcl|NC_000964.3_cds_NP_391985.1_4236"
+ "lcl|NC_000964.3_cds_NP_391986.1_4237"
 ```
 """
 function seq_names(path::AbstractString)
@@ -228,7 +233,12 @@ julia> seq_descr = seq_descriptions(example_data_path)
  "lcl|NC_000964.3_cds_NP_387885.1" ⋯ 350 bytes ⋯ "cation=3437..4549] [gbkey=CDS]"
  "lcl|NC_000964.3_cds_NP_387886.2" ⋯ 248 bytes ⋯ "cation=4567..4812] [gbkey=CDS]"
  "lcl|NC_000964.3_cds_NP_387887.1" ⋯ 466 bytes ⋯ "cation=4867..6783] [gbkey=CDS]"
-[...]
+ ⋮
+ "lcl|NC_000964.3_cds_NP_391982.1" ⋯ 428 bytes ⋯ "4211510..4212889)] [gbkey=CDS]"
+ "lcl|NC_000964.3_cds_NP_391983.1" ⋯ 375 bytes ⋯ "4213200..4213826)] [gbkey=CDS]"
+ "lcl|NC_000964.3_cds_NP_391984.1" ⋯ 351 bytes ⋯ "4213823..4214608)] [gbkey=CDS]"
+ "lcl|NC_000964.3_cds_NP_391985.1" ⋯ 381 bytes ⋯ "4214753..4215103)] [gbkey=CDS]"
+ "lcl|NC_000964.3_cds_NP_391986.1" ⋯ 313 bytes ⋯ "4215255..4215389)] [gbkey=CDS]"
 
 julia> seq_descr[1]
 "lcl|NC_000964.3_cds_NP_387882.1_1 [gene=dnaA] [locus_tag=BSU_00010] [db_xref=EnsemblGenomes-Gn:BSU00010,EnsemblGenomes-Tr:CAB11777,GOA:P05648,InterPro:IPR001957,InterPro:IPR003593,InterPro:IPR010921,InterPro:IPR013159,InterPro:IPR013317,InterPro:IPR018312,InterPro:IPR020591,InterPro:IPR024633,InterPro:IPR027417,PDB:4TPS,SubtiList:BG10065,UniProtKB/Swiss-Prot:P05648] [protein=chromosomal replication initiator informational ATPase] [protein_id=NP_387882.1] [location=410..1750] [gbkey=CDS]"
