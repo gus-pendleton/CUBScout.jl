@@ -16,6 +16,8 @@ makedocs(;
     ),
     pages=[
         "Home" => "index.md",
+        "Codon Usage Bias" => "cub.md",
+        "Functions" => "functions.md"
     ],
 )
 
