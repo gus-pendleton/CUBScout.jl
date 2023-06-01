@@ -18,7 +18,7 @@ makedocs(;
         "Home" => "index.md",
         "Codon Usage Bias" => "cub.md",
         "Expressivity Prediction" => "exp.md",
-        "Functions" => "functions.md"
+        "Functions" => "functions.md",
         "References" => "reference.md"
     ],
 )
