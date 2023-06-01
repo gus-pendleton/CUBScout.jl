@@ -1,8 +1,8 @@
 ```@meta
 CurrentModule = CUBScout
 ```
-
-# CUBScout
+![header](https://raw.githubusercontent.com/gus-pendleton/CUBScout.jl/main/docs/src/assets/big_pic.png)
+# **C**odon **U**sage **B**ias in Julia
 
 [CUBScout](https://github.com/gus-pendleton/CUBScout.jl) calculates **C**odon **U**sage **B**ias (CUB) and related expressivity predictions. Currently, `CUBScout` calculates:
 
