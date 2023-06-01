@@ -15,7 +15,7 @@ makedocs(;
         assets=String[],
     ),
     pages=[
-        "Home" => "index.md",
+        "Introduction" => "index.md",
         "Codon Usage Bias" => "cub.md",
         "Expressivity Prediction" => "exp.md",
         "Functions" => "functions.md",
