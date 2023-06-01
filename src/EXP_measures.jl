@@ -361,11 +361,11 @@ julia> round.(ribo_result.GCB[1:5], digits = 6)
  -0.186104
  -0.01653
 
-julia> fop(example_data_path, ribosomal_genes, altstart_codon_dict); # Code TTG and CTG as methionine
+julia> gcb(example_data_path altstart_codon_dict); # Code TTG and CTG as methionine
 
-julia> fop(example_data_path, ribosomal_genes, rm_start = true); # Remove start codons
+julia> gcb(example_data_path, rm_start = true); # Remove start codons
 
-julia> fop(example_data_path, ribosomal_genes, dataframe = true); # Get output in dataframe format
+julia> gcb(example_data_path, dataframe = true); # Get output in dataframe format
 ```
 """
 function gcb(filepath::String, dict::codon_dict = default_codon_dict; ref_vector = [], perc = 0.05, rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
