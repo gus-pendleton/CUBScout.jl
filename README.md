@@ -27,10 +27,6 @@
 You can install `CUBScout` by:
 
 ```julia
-] add CUBScout#main
-```
-or
-```julia
 using Pkg
 Pkg.add(url = "https://github.com/gus-pendleton/CUBScout.jl")
 ```
