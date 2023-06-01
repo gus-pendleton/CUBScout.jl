@@ -120,7 +120,7 @@ end
 """
     cai(filepath::String, ref_vector::Vector{Bool}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
     cai(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
-Calculate CAI from Sharp and Lee, 1987.
+Calculate CAI from Sharp and Li, 1987.
 
 # Arguments
 - `filepath`: path to fasta file of coding sequences (e.g. .fasta, .fna, .fa). There are no quality checks, so it's assumed that each entry is assumed to be an individual coding sequence, in the correct frame, without 5' or 3' untranslated regions.
