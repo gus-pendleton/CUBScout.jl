@@ -12,7 +12,7 @@ makedocs(;
         prettyurls=get(ENV, "CI", "false") == "true",
         canonical="https://gus-pendleton.github.io/CUBScout.jl",
         edit_link="main",
-        assets=String[],
+        assets=String[joinpath("assets", "favicon.ico")],
     ),
     pages=[
         "Introduction" => "index.md",
