@@ -6,7 +6,7 @@
 
 **C**odon **U**sage **B**ias (CUB) in Julia
 
-[CUBScout](https://github.com/gus-pendleton/CUBScout.jl) calculates **C**odon **U**sage **B**ias (CUB) and related expressivity predictions. Currently, `CUBScout` calculates:
+`CUBScout` calculates **C**odon **U**sage **B**ias (CUB) and related expressivity predictions. Currently, `CUBScout` calculates:
 
 - Six measures of codon usage bias:
     - B, from Karlin and Mrazek, 1996
