@@ -10,11 +10,11 @@ CurrentModule = CUBScout
     - B, from Karlin and Mrazek, 1996
     - ENC, from Wright 1990
     - ENC', from Novembre, 2002
-    - MCB, from Urutia and Hurst, 2001
+    - MCB, from Urrutia and Hurst, 2001
     - MILC, from Supek and Vlahovicek, 2005
     - SCUO, from Wan et al., 2004
 - Five expressivity measures based on codon usage bias:
-    - CAI, from Sharp and Lee, 1987
+    - CAI, from Sharp and Li, 1987
     - E, from Karlin and Mrazek, 1996
     - FOP, from Ikemura, 1981
     - GCB, from Merkl, 2003

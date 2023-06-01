@@ -361,7 +361,7 @@ julia> round.(ribo_result.GCB[1:5], digits = 6)
  -0.186104
  -0.01653
 
-julia> gcb(example_data_path altstart_codon_dict); # Code TTG and CTG as methionine
+julia> gcb(example_data_path, altstart_codon_dict); # Code TTG and CTG as methionine
 
 julia> gcb(example_data_path, rm_start = true); # Remove start codons
 
