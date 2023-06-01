@@ -34,3 +34,11 @@ or
 using Pkg
 Pkg.add(url = "https://github.com/gus-pendleton/CUBScout.jl")
 ```
+
+
+CUBScout is under active development, and I welcome contributions or suggestions! Additional features I'm working on/would like to incorporate:
+
+- Performance improvements
+- Plotting support (e.g. BPlots)
+- Additional CUB measures, including S, RCDI, CDC, RCA, RCSU, and RCBS
+- Growth predictions derived from CUB, such as those in growthpred and gRodon
