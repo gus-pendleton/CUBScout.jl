@@ -33,7 +33,7 @@ julia> melp_result.MELP
  0.8840414848184831
 ```
 
-The functions `cai`, `e`, `fop`, and `melp` all accept the same arguments. Their optional arguments are the same as codon usage bias functions, including options to specify a custom `codon_dict`, remove start or stop codons, set a filtering threshold, and output in dataframe format. They also handle multiple files and multi-threading in the same way, and so I do not recommend broadcasting these functions.
+The functions `cai`, `e`, `fop`, and `melp` all accept the same arguments. Their optional arguments are the same as codon usage bias functions, including options to specify a custom `codon_dict`, remove start or stop codons, and set a filtering threshold. They also handle multiple files and multi-threading in the same way, and so I do not recommend broadcasting these functions.
 
 ## GCB-specific Arguments
 

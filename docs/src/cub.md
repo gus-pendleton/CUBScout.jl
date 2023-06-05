@@ -318,62 +318,22 @@ julia> length(b_result_300.self)
 1650
 ```
 
-### `dataframe`
-
-By default, results are returned as named tuples. If you would like a dataframe instead, set `dataframe = true`. 
-
-```julia-repl
-julia> b(example_data_path)
-(self = [0.20912699220973896, 0.3289759448740455, 0.22365336363593893, 0.5391135258658497, 0.24919594143501034, 0.2880358413249049, 0.31200964304415874, 0.34858035204347476, 0.2455189361074733, 0.4690734561271221  …  0.3629137353834403, 0.3621330537227321, 0.4535285720373026, 0.3357858047622507, 0.28183191395624935, 0.2668809561422238, 0.22381338105820905, 0.4034837015709619, 0.3594626865160133, 0.3724863965444541], Identifier = ["lcl|NC_000964.3_cds_NP_387882.1_1", "lcl|NC_000964.3_cds_NP_387883.1_2", "lcl|NC_000964.3_cds_NP_387885.1_4", "lcl|NC_000964.3_cds_NP_387886.2_5", "lcl|NC_000964.3_cds_NP_387887.1_6", "lcl|NC_000964.3_cds_NP_387888.1_7", "lcl|NC_000964.3_cds_NP_387889.1_8", "lcl|NC_000964.3_cds_NP_387890.1_9", "lcl|NC_000964.3_cds_NP_387891.1_10", "lcl|NC_000964.3_cds_NP_387892.1_11"  …  "lcl|NC_000964.3_cds_NP_391976.1_4227", "lcl|NC_000964.3_cds_NP_391977.1_4228", "lcl|NC_000964.3_cds_NP_391978.2_4229", "lcl|NC_000964.3_cds_NP_391979.1_4230", "lcl|NC_000964.3_cds_NP_391980.1_4231", "lcl|NC_000964.3_cds_NP_391981.1_4232", "lcl|NC_000964.3_cds_NP_391982.1_4233", "lcl|NC_000964.3_cds_NP_391983.1_4234", "lcl|NC_000964.3_cds_NP_391984.1_4235", "lcl|NC_000964.3_cds_NP_391985.1_4236"])
-
-julia> b(example_data_path, dataframe = true)
-3801×3 DataFrame
-  Row │ self      Identifier                         File                              
-      │ Float64   String                             String                            
-──────┼────────────────────────────────────────────────────────────────────────────────
-    1 │ 0.209127  lcl|NC_000964.3_cds_NP_387882.1_1  /Users/augustuspendleton/.julia/…
-    2 │ 0.328976  lcl|NC_000964.3_cds_NP_387883.1_2  /Users/augustuspendleton/.julia/…
-    3 │ 0.223653  lcl|NC_000964.3_cds_NP_387885.1_4  /Users/augustuspendleton/.julia/…
-    4 │ 0.539114  lcl|NC_000964.3_cds_NP_387886.2_5  /Users/augustuspendleton/.julia/…
-  ⋮   │    ⋮                      ⋮                                  ⋮
- 3799 │ 0.403484  lcl|NC_000964.3_cds_NP_391983.1_…  /Users/augustuspendleton/.julia/…
- 3800 │ 0.359463  lcl|NC_000964.3_cds_NP_391984.1_…  /Users/augustuspendleton/.julia/…
- 3801 │ 0.372486  lcl|NC_000964.3_cds_NP_391985.1_…  /Users/augustuspendleton/.julia/…
-                                                                      3794 rows omitted
-```
-
 ## Analyzing Multiple Files
 
-Often, you might have a directory containing multiple .fna files, each of which you want to analyze. You can provide a vector of filepaths to any `CUBScout` function, which will return a vector of results. If `dataframe = true`, results from multiple files will be verticaly concatenated. If supplying `ref_seqs`, provide a vector of named tuples corresponding to each file. `CUBScout` is multi-threaded, and if Julia is started with multiple threads, will assign individual threads to process individual files. This means you *should not broadcast* `CUBScout` functions as it will reduce efficiency. Also each file is only ever processed by a single thread, so using more threads than you have files is unnecessary. 
+Often, you might have a directory containing multiple .fna files, each of which you want to analyze. You can provide a vector of filepaths to any `CUBScout` function, which will return a vector of results. If supplying `ref_seqs`, provide a vector of named tuples corresponding to each file. `CUBScout` is multi-threaded, and if Julia is started with multiple threads, will assign individual threads to process individual files. This means you *should not broadcast* `CUBScout` functions as it will reduce efficiency. Also each file is only ever processed by a single thread, so using more threads than you have files is unnecessary. 
 
 ```julia-repl
-julia> enc_p([example_data_path,example_data_path], dataframe = true)
-7602×3 DataFrame
-  Row │ self     Identifier                         File                              
-      │ Float64  String                             String                            
-──────┼───────────────────────────────────────────────────────────────────────────────
-    1 │ 61.0     lcl|NC_000964.3_cds_NP_387882.1_1  /Users/augustuspendleton/.julia/…
-    2 │ 59.3698  lcl|NC_000964.3_cds_NP_387883.1_2  /Users/augustuspendleton/.julia/…
-    3 │ 60.7495  lcl|NC_000964.3_cds_NP_387885.1_4  /Users/augustuspendleton/.julia/…
-    4 │ 61.0     lcl|NC_000964.3_cds_NP_387886.2_5  /Users/augustuspendleton/.julia/…
-  ⋮   │    ⋮                     ⋮                                  ⋮
- 7600 │ 59.9479  lcl|NC_000964.3_cds_NP_391983.1_…  /Users/augustuspendleton/.julia/…
- 7601 │ 59.4305  lcl|NC_000964.3_cds_NP_391984.1_…  /Users/augustuspendleton/.julia/…
- 7602 │ 61.0     lcl|NC_000964.3_cds_NP_391985.1_…  /Users/augustuspendleton/.julia/…
-                                                                     7595 rows omitted
+julia> enc_p([example_data_path,example_data_path])
+2-element Vector{Any}:
+ self = [61.0, 59.36979815371983, 60.7494622549966, 61.0, ...],
+ Identifier = ["lcl|NC_000964.3_cds_NP_387882.1_1", "lcl|NC_000964.3_cds_NP_387883.1_2", ...]),
+ self = [61.0, 59.36979815371983, 60.7494622549966, 61.0, ...],
+ Identifier = ["lcl|NC_000964.3_cds_NP_387882.1_1", "lcl|NC_000964.3_cds_NP_387883.1_2", ...])
 
-julia> enc_p([example_data_path,example_data_path], ref_seqs = [(ribosomal = ribosomal_genes,), (ribosomal = ribosomal_genes,)], dataframe = true)
-7602×3 DataFrame
-  Row │ ribosomal  Identifier                         File                              
-      │ Float64    String                             String                            
-──────┼─────────────────────────────────────────────────────────────────────────────────
-    1 │   61.0     lcl|NC_000964.3_cds_NP_387882.1_1  /Users/augustuspendleton/.julia/…
-    2 │   58.8882  lcl|NC_000964.3_cds_NP_387883.1_2  /Users/augustuspendleton/.julia/…
-    3 │   56.4104  lcl|NC_000964.3_cds_NP_387885.1_4  /Users/augustuspendleton/.julia/…
-    4 │   61.0     lcl|NC_000964.3_cds_NP_387886.2_5  /Users/augustuspendleton/.julia/…
-  ⋮   │     ⋮                      ⋮                                  ⋮
- 7600 │   56.5325  lcl|NC_000964.3_cds_NP_391983.1_…  /Users/augustuspendleton/.julia/…
- 7601 │   55.6687  lcl|NC_000964.3_cds_NP_391984.1_…  /Users/augustuspendleton/.julia/…
- 7602 │   61.0     lcl|NC_000964.3_cds_NP_391985.1_…  /Users/augustuspendleton/.julia/…
-                                                                       7595 rows omitted
+julia> enc_p([example_data_path,example_data_path], ref_seqs = [(ribosomal = ribosomal_genes,), (ribosomal = ribosomal_genes,)])
+2-element Vector{Any}:
+ self = [61.0, 58.88817312982425, 56.41038374603565, 61.0, ...],
+ Identifier = ["lcl|NC_000964.3_cds_NP_387882.1_1", "lcl|NC_000964.3_cds_NP_387883.1_2", ...]),
+ self = [61.0, 58.88817312982425, 56.41038374603565, 61.0, ...],
+ Identifier = ["lcl|NC_000964.3_cds_NP_387882.1_1", "lcl|NC_000964.3_cds_NP_387883.1_2", ...])
 ```
