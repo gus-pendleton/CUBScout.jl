@@ -13,9 +13,9 @@ Expressivity predictions based on codon usage bias can be calculated with the fu
 Let's calculate MELP on our example data, using ribosomal proteins as a reference subset. 
 
 ```julia-repl
-julia> ribosomal_genes = find_seqs(example_data_path, r"ribosomal");
+julia> ribosomal_genes = find_seqs(EXAMPLE_DATA_PATH, r"ribosomal");
 
-julia> melp_result = melp(example_data_path, ribosomal_genes);
+julia> melp_result = melp(EXAMPLE_DATA_PATH, ribosomal_genes);
 
 julia> melp_result.MELP
 3801-element Vector{Float64}:
@@ -33,7 +33,7 @@ julia> melp_result.MELP
  0.8840414848184831
 ```
 
-The functions `cai`, `e`, `fop`, and `melp` all accept the same arguments. Their optional arguments are the same as codon usage bias functions, including options to specify a custom `codon_dict`, remove start or stop codons, and set a filtering threshold. They also handle multiple files and multi-threading in the same way, and so I do not recommend broadcasting these functions.
+The functions `cai`, `e`, `fop`, and `melp` all accept the same arguments. Their optional arguments are the same as codon usage bias functions, including options to specify a custom `CodonDict`, remove start or stop codons, and set a filtering threshold. They also handle multiple files and multi-threading in the same way, and so I do not recommend broadcasting these functions.
 
 ## GCB-specific Arguments
 

@@ -161,7 +161,7 @@ Read a fasta file at `path` and query the *description* field for a given Regex 
 
 # Examples
 ```jldoctest
-julia> find_seqs(example_data_path, r"ribosomal")[1:5]
+julia> find_seqs(EXAMPLE_DATA_PATH, r"ribosomal")[1:5]
 5-element Vector{Bool}:
  0
  0
@@ -186,7 +186,7 @@ Read a fasta file at `path` and return the *name* fields. Just adds convenience 
 
 # Examples
 ```jldoctest
-julia> seq_name_vector = seq_names(example_data_path);
+julia> seq_name_vector = seq_names(EXAMPLE_DATA_PATH);
 
 julia> seq_name_vector[1]
 "lcl|NC_000964.3_cds_NP_387882.1_1"
@@ -208,7 +208,7 @@ Read a fasta file at `path` and return the *description* fields. Just adds conve
 
 # Examples
 ```jldoctest
-julia> seq_descr = seq_descriptions(example_data_path);
+julia> seq_descr = seq_descriptions(EXAMPLE_DATA_PATH);
 
 julia> seq_descr[1]
 "lcl|NC_000964.3_cds_NP_387882.1_1 [gene=dnaA] [locus_tag=BSU_00010] [db_xref=EnsemblGenomes-Gn:BSU00010,EnsemblGenomes-Tr:CAB11777,GOA:P05648,InterPro:IPR001957,InterPro:IPR003593,InterPro:IPR010921,InterPro:IPR013159,InterPro:IPR013317,InterPro:IPR018312,InterPro:IPR020591,InterPro:IPR024633,InterPro:IPR027417,PDB:4TPS,SubtiList:BG10065,UniProtKB/Swiss-Prot:P05648] [protein=chromosomal replication initiator informational ATPase] [protein_id=NP_387882.1] [location=410..1750] [gbkey=CDS]"

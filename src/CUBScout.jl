@@ -6,7 +6,7 @@ module CUBScout
     using Artifacts
     using Statistics
 
-    export codon_dict, make_codon_dict, codon_dict_path, default_codon_dict, altstart_codon_dict, example_data_path, find_seqs, seq_names, seq_descriptions
+    export CodonDict, make_CodonDict, CodonDict_PATH, DEFAULT_CodonDict, ALTSTART_CodonDict, EXAMPLE_DATA_PATH, find_seqs, seq_names, seq_descriptions
     export b, enc, enc_p, mcb, milc, scuo, all_cub
     export e, melp, cai, fop, gcb
 

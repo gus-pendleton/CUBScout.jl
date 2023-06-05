@@ -1,23 +1,23 @@
 
 """
-    melp(filepath::String, ref_vector::Vector{Bool}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80)
-    melp(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80)
+    melp(filepath::String, ref_vector::Vector{Bool}, dict::CodonDict = DEFAULT_CodonDict; rm_start = false, rm_stop = false, threshold = 80)
+    melp(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::CodonDict = DEFAULT_CodonDict; rm_start = false, rm_stop = false, threshold = 80)
 Calculate MELP from Supek and Vlahovicek, 2005.
 
 # Arguments
 - `filepath`: path to fasta file of coding sequences (e.g. .fasta, .fna, .fa). There are no quality checks, so it's assumed that each entry is assumed to be an individual coding sequence, in the correct frame, without 5' or 3' untranslated regions.
 - `filepaths`: vector of paths to fasta files of coding sequences (e.g. .fasta, .fna, .fa). `CUBScout` is multithreaded; if there are multiple threads available, `CUBScout` will allocate a thread for each filepath. As such, providing a vector of paths as an argument will be faster than broadcasting across a vector of paths. Because a single file is only accessed by a single thread, it's never worth using more threads than the total number of files being analyzed. There are no quality checks, so it's assumed that each entry is an individual coding sequence, in the correct frame, without 5' or 3' untranslated regions.
 - `ref_vector`: reference subset, which is required for `melp`. `Bool[]` the same length as the number of sequences in your fasta file, and contains `true` for sequences you want as your reference subset and false for those you don't. You can use `find_seqs()` to generate this vector. If providing multiple filepaths and want custom reference sets, `ref_vectors` should be a vector of vectors corresponding to the vector of filepaths.
-- `dict`: codon dictionary of type `codon_dict`. The standard genetic code is loaded by default, but if necessary you can create your own codon dictionary using `make_codon_dict`
-- `rm_start`: whether to ignore the first codon of each sequence. Many organisms use alternative start codons such as TTG and CTG, which in other locations would generally code for leucine. There are a few approaches to deal with this. By default, `CUBScout` keeps each start codon and assigns it as though it were any other codon. Of course, this would slightly change leucine's contribution to codon usage bias. If you set `rm_start` to `true`, the first codon of every sequence is simply discarded. This will also affect the gene's length, which means it could be removed if it falls under the threshold. Other CUB packages (such as R's coRdon, alt.init = TRUE), assign all TTG and CTG codons to methionine, regardless of their location. I disagree with this approach from a biological perspective; those codons still code for leucine most of the time they are used. However, if you want matching output as you would get from coRdon, you can supply `altstart_codon_dict` to the `dict` argument, and keep `rm_start` as `false`.
+- `dict`: codon dictionary of type `CodonDict`. The standard genetic code is loaded by default, but if necessary you can create your own codon dictionary using `make_CodonDict`
+- `rm_start`: whether to ignore the first codon of each sequence. Many organisms use alternative start codons such as TTG and CTG, which in other locations would generally code for leucine. There are a few approaches to deal with this. By default, `CUBScout` keeps each start codon and assigns it as though it were any other codon. Of course, this would slightly change leucine's contribution to codon usage bias. If you set `rm_start` to `true`, the first codon of every sequence is simply discarded. This will also affect the gene's length, which means it could be removed if it falls under the threshold. Other CUB packages (such as R's coRdon, alt.init = TRUE), assign all TTG and CTG codons to methionine, regardless of their location. I disagree with this approach from a biological perspective; those codons still code for leucine most of the time they are used. However, if you want matching output as you would get from coRdon, you can supply `ALTSTART_CodonDict` to the `dict` argument, and keep `rm_start` as `false`.
 - `rm_stop`: whether to remove stop codons from calculations of codon usage bias.
 - `threshold`: minimum length of a gene (in codons) to be used in codon usage bias calculations. By default this is set to 80 codons; any genes less than or equal to that length are discarded. If you want no genes discarded, set `threshold` to 0.
 
 # Examples
 ```jldoctest
-julia> ribosomal_genes = find_seqs(example_data_path, r"ribosomal"); # Get a vector which is true for ribosomal genes
+julia> ribosomal_genes = find_seqs(EXAMPLE_DATA_PATH, r"ribosomal"); # Get a vector which is true for ribosomal genes
 
-julia> result = melp(example_data_path, ribosomal_genes); # Calculate MELP on example dataset
+julia> result = melp(EXAMPLE_DATA_PATH, ribosomal_genes); # Calculate MELP on example dataset
 
 julia> round.(result.MELP[1:5], digits = 6)
 5-element Vector{Float64}:
@@ -27,41 +27,41 @@ julia> round.(result.MELP[1:5], digits = 6)
  0.951239
  1.029531
 
-julia> melp(example_data_path, ribosomal_genes, altstart_codon_dict); # Code TTG and CTG as methionine
+julia> melp(EXAMPLE_DATA_PATH, ribosomal_genes, ALTSTART_CodonDict); # Code TTG and CTG as methionine
 
-julia> melp(example_data_path, ribosomal_genes, rm_start = true); # Remove start codons
+julia> melp(EXAMPLE_DATA_PATH, ribosomal_genes, rm_start = true); # Remove start codons
 ```
 """
-function melp(filepath::String, ref_vector::Vector{Bool}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80)
+function melp(filepath::String, ref_vector::Vector{Bool}, dict::CodonDict = DEFAULT_CodonDict; rm_start = false, rm_stop = false, threshold = 80)
     milcs = milc(filepath, dict, ref_seqs = (self = fill(true, length(ref_vector)), reference = ref_vector), rm_start = rm_start, rm_stop = rm_stop, threshold = threshold)
     return (MELP = milcs.self ./ milcs.reference, Identifier = milcs.Identifier)
 end
 
-function melp(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80)
+function melp(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::CodonDict = DEFAULT_CodonDict; rm_start = false, rm_stop = false, threshold = 80)
     ref_tuples = map(x->(self = fill(true, length(x)), reference = x), ref_vectors)
     milcs = milc(filepaths, dict, ref_seqs = ref_tuples, rm_start = rm_start, rm_stop = rm_stop, threshold = threshold)
     return map(x->(MELP = x.self ./ x.reference, x.Identifier), milcs)
 end
 
 """
-    e(filepath::String, ref_vector::Vector{Bool}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80)
-    e(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80)
+    e(filepath::String, ref_vector::Vector{Bool}, dict::CodonDict = DEFAULT_CodonDict; rm_start = false, rm_stop = false, threshold = 80)
+    e(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::CodonDict = DEFAULT_CodonDict; rm_start = false, rm_stop = false, threshold = 80)
 Calculate E from Karlin and Mrazek, 1996.
 
 # Arguments
 - `filepath`: path to fasta file of coding sequences (e.g. .fasta, .fna, .fa). There are no quality checks, so it's assumed that each entry is assumed to be an individual coding sequence, in the correct frame, without 5' or 3' untranslated regions.
 - `filepaths`: vector of paths to fasta files of coding sequences (e.g. .fasta, .fna, .fa). `CUBScout` is multithreaded; if there are multiple threads available, `CUBScout` will allocate a thread for each filepath. As such, providing a vector of paths as an argument will be faster than broadcasting across a vector of paths. Because a single file is only accessed by a single thread, it's never worth using more threads than the total number of files being analyzed. There are no quality checks, so it's assumed that each entry is an individual coding sequence, in the correct frame, without 5' or 3' untranslated regions.
 - `ref_vector`: reference subset, which is required for `e`. `Bool[]` the same length as the number of sequences in your fasta file, and contains `true` for sequences you want as your reference subset and false for those you don't. You can use `find_seqs()` to generate this vector. If providing multiple filepaths and want custom reference sets, `ref_vectors` should be a vector of vectors corresponding to the vector of filepaths.
-- `dict`: codon dictionary of type `codon_dict`. The standard genetic code is loaded by default, but if necessary you can create your own codon dictionary using `make_codon_dict`
-- `rm_start`: whether to ignore the first codon of each sequence. Many organisms use alternative start codons such as TTG and CTG, which in other locations would generally code for leucine. There are a few approaches to deal with this. By default, `CUBScout` keeps each start codon and assigns it as though it were any other codon. Of course, this would slightly change leucine's contribution to codon usage bias. If you set `rm_start` to `true`, the first codon of every sequence is simply discarded. This will also affect the gene's length, which means it could be removed if it falls under the threshold. Other CUB packages (such as R's coRdon, alt.init = TRUE), assign all TTG and CTG codons to methionine, regardless of their location. I disagree with this approach from a biological perspective; those codons still code for leucine most of the time they are used. However, if you want matching output as you would get from coRdon, you can supply `altstart_codon_dict` to the `dict` argument, and keep `rm_start` as `false`.
+- `dict`: codon dictionary of type `CodonDict`. The standard genetic code is loaded by default, but if necessary you can create your own codon dictionary using `make_CodonDict`
+- `rm_start`: whether to ignore the first codon of each sequence. Many organisms use alternative start codons such as TTG and CTG, which in other locations would generally code for leucine. There are a few approaches to deal with this. By default, `CUBScout` keeps each start codon and assigns it as though it were any other codon. Of course, this would slightly change leucine's contribution to codon usage bias. If you set `rm_start` to `true`, the first codon of every sequence is simply discarded. This will also affect the gene's length, which means it could be removed if it falls under the threshold. Other CUB packages (such as R's coRdon, alt.init = TRUE), assign all TTG and CTG codons to methionine, regardless of their location. I disagree with this approach from a biological perspective; those codons still code for leucine most of the time they are used. However, if you want matching output as you would get from coRdon, you can supply `ALTSTART_CodonDict` to the `dict` argument, and keep `rm_start` as `false`.
 - `rm_stop`: whether to remove stop codons from calculations of codon usage bias.
 - `threshold`: minimum length of a gene (in codons) to be used in codon usage bias calculations. By default this is set to 80 codons; any genes less than or equal to that length are discarded. If you want no genes discarded, set `threshold` to 0.
 
 # Examples
 ```jldoctest
-julia> ribosomal_genes = find_seqs(example_data_path, r"ribosomal"); # Get a vector which is true for ribosomal genes
+julia> ribosomal_genes = find_seqs(EXAMPLE_DATA_PATH, r"ribosomal"); # Get a vector which is true for ribosomal genes
 
-julia> result = e(example_data_path, ribosomal_genes); # Calculate E on example dataset
+julia> result = e(EXAMPLE_DATA_PATH, ribosomal_genes); # Calculate E on example dataset
 
 julia> round.(result.E[1:5], digits = 6)
 5-element Vector{Float64}:
@@ -71,18 +71,18 @@ julia> round.(result.E[1:5], digits = 6)
  0.986498
  1.111275
 
-julia> e(example_data_path, ribosomal_genes, altstart_codon_dict); # Code TTG and CTG as methionine
+julia> e(EXAMPLE_DATA_PATH, ribosomal_genes, ALTSTART_CodonDict); # Code TTG and CTG as methionine
 
-julia> e(example_data_path, ribosomal_genes, rm_start = true); # Remove start codons
+julia> e(EXAMPLE_DATA_PATH, ribosomal_genes, rm_start = true); # Remove start codons
 ```
 """
-function e(filepath::String, ref_vector::Vector{Bool}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80)
+function e(filepath::String, ref_vector::Vector{Bool}, dict::CodonDict = DEFAULT_CodonDict; rm_start = false, rm_stop = false, threshold = 80)
     bs = b(filepath, dict, ref_seqs = (self = fill(true, length(ref_vector)), reference = ref_vector), rm_start = rm_start, rm_stop = rm_stop, threshold = threshold)
     
     return (E = bs.self ./ bs.reference, Identifier = bs.Identifier)
 end
 
-function e(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80)
+function e(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::CodonDict = DEFAULT_CodonDict; rm_start = false, rm_stop = false, threshold = 80)
     ref_tuples = map(x->(self = fill(true, length(x)), reference = x), ref_vectors)
     bs = b(filepaths, dict, ref_seqs = ref_tuples, rm_start = rm_start, rm_stop = rm_stop, threshold = threshold)
 
@@ -90,24 +90,24 @@ function e(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::c
 end
 
 """
-    cai(filepath::String, ref_vector::Vector{Bool}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80)
-    cai(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80)
+    cai(filepath::String, ref_vector::Vector{Bool}, dict::CodonDict = DEFAULT_CodonDict; rm_start = false, rm_stop = false, threshold = 80)
+    cai(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::CodonDict = DEFAULT_CodonDict; rm_start = false, rm_stop = false, threshold = 80)
 Calculate CAI from Sharp and Li, 1987.
 
 # Arguments
 - `filepath`: path to fasta file of coding sequences (e.g. .fasta, .fna, .fa). There are no quality checks, so it's assumed that each entry is assumed to be an individual coding sequence, in the correct frame, without 5' or 3' untranslated regions.
 - `filepaths`: vector of paths to fasta files of coding sequences (e.g. .fasta, .fna, .fa). `CUBScout` is multithreaded; if there are multiple threads available, `CUBScout` will allocate a thread for each filepath. As such, providing a vector of paths as an argument will be faster than broadcasting across a vector of paths. Because a single file is only accessed by a single thread, it's never worth using more threads than the total number of files being analyzed. There are no quality checks, so it's assumed that each entry is an individual coding sequence, in the correct frame, without 5' or 3' untranslated regions.
 - `ref_vector`: reference subset, which is required for `cai`. `Bool[]` the same length as the number of sequences in your fasta file, and contains `true` for sequences you want as your reference subset and false for those you don't. You can use `find_seqs()` to generate this vector. If providing multiple filepaths and want custom reference sets, `ref_vectors` should be a vector of vectors corresponding to the vector of filepaths.
-- `dict`: codon dictionary of type `codon_dict`. The standard genetic code is loaded by default, but if necessary you can create your own codon dictionary using `make_codon_dict`
-- `rm_start`: whether to ignore the first codon of each sequence. Many organisms use alternative start codons such as TTG and CTG, which in other locations would generally code for leucine. There are a few approaches to deal with this. By default, `CUBScout` keeps each start codon and assigns it as though it were any other codon. Of course, this would slightly change leucine's contribution to codon usage bias. If you set `rm_start` to `true`, the first codon of every sequence is simply discarded. This will also affect the gene's length, which means it could be removed if it falls under the threshold. Other CUB packages (such as R's coRdon, alt.init = TRUE), assign all TTG and CTG codons to methionine, regardless of their location. I disagree with this approach from a biological perspective; those codons still code for leucine most of the time they are used. However, if you want matching output as you would get from coRdon, you can supply `altstart_codon_dict` to the `dict` argument, and keep `rm_start` as `false`.
+- `dict`: codon dictionary of type `CodonDict`. The standard genetic code is loaded by default, but if necessary you can create your own codon dictionary using `make_CodonDict`
+- `rm_start`: whether to ignore the first codon of each sequence. Many organisms use alternative start codons such as TTG and CTG, which in other locations would generally code for leucine. There are a few approaches to deal with this. By default, `CUBScout` keeps each start codon and assigns it as though it were any other codon. Of course, this would slightly change leucine's contribution to codon usage bias. If you set `rm_start` to `true`, the first codon of every sequence is simply discarded. This will also affect the gene's length, which means it could be removed if it falls under the threshold. Other CUB packages (such as R's coRdon, alt.init = TRUE), assign all TTG and CTG codons to methionine, regardless of their location. I disagree with this approach from a biological perspective; those codons still code for leucine most of the time they are used. However, if you want matching output as you would get from coRdon, you can supply `ALTSTART_CodonDict` to the `dict` argument, and keep `rm_start` as `false`.
 - `rm_stop`: whether to remove stop codons from calculations of codon usage bias.
 - `threshold`: minimum length of a gene (in codons) to be used in codon usage bias calculations. By default this is set to 80 codons; any genes less than or equal to that length are discarded. If you want no genes discarded, set `threshold` to 0.
 
 # Examples
 ```jldoctest
-julia> ribosomal_genes = find_seqs(example_data_path, r"ribosomal"); # Get a vector which is true for ribosomal genes
+julia> ribosomal_genes = find_seqs(EXAMPLE_DATA_PATH, r"ribosomal"); # Get a vector which is true for ribosomal genes
 
-julia> result = cai(example_data_path, ribosomal_genes); # Calculate CAI on example dataset
+julia> result = cai(EXAMPLE_DATA_PATH, ribosomal_genes); # Calculate CAI on example dataset
 
 julia> round.(result.CAI[1:5], digits = 6)
 5-element Vector{Float64}:
@@ -117,12 +117,12 @@ julia> round.(result.CAI[1:5], digits = 6)
  1.072675
  0.834179
 
-julia> cai(example_data_path, ribosomal_genes, altstart_codon_dict); # Code TTG and CTG as methionine
+julia> cai(EXAMPLE_DATA_PATH, ribosomal_genes, ALTSTART_CodonDict); # Code TTG and CTG as methionine
 
-julia> cai(example_data_path, ribosomal_genes, rm_start = true); # Remove start codons
+julia> cai(EXAMPLE_DATA_PATH, ribosomal_genes, rm_start = true); # Remove start codons
 ```
 """
-function cai(filepath::String, ref_vector::Vector{Bool}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80)
+function cai(filepath::String, ref_vector::Vector{Bool}, dict::CodonDict = DEFAULT_CodonDict; rm_start = false, rm_stop = false, threshold = 80)
     if rm_stop
         uniqueI = dict.uniqueI_nostops
         deg = dict.deg_nostops
@@ -137,7 +137,7 @@ function cai(filepath::String, ref_vector::Vector{Bool}, dict::codon_dict = defa
     return cai(filepath, ref_vector, uniqueI, deg, stop_mask, aa_names, rm_start, threshold)
 end
 
-function cai(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80)
+function cai(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::CodonDict = DEFAULT_CodonDict; rm_start = false, rm_stop = false, threshold = 80)
     len = length(filepaths)
     results = Vector{Any}(undef, len)
     if rm_stop
@@ -186,24 +186,24 @@ end
 
 
 """
-    fop(filepath::String, ref_vector::Vector{Bool}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80)
-    fop(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80)
+    fop(filepath::String, ref_vector::Vector{Bool}, dict::CodonDict = DEFAULT_CodonDict; rm_start = false, rm_stop = false, threshold = 80)
+    fop(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::CodonDict = DEFAULT_CodonDict; rm_start = false, rm_stop = false, threshold = 80)
 Calculate FOP from Ikemura, 1981.
 
 # Arguments
 - `filepath`: path to fasta file of coding sequences (e.g. .fasta, .fna, .fa). There are no quality checks, so it's assumed that each entry is assumed to be an individual coding sequence, in the correct frame, without 5' or 3' untranslated regions.
 - `filepaths`: vector of paths to fasta files of coding sequences (e.g. .fasta, .fna, .fa). `CUBScout` is multithreaded; if there are multiple threads available, `CUBScout` will allocate a thread for each filepath. As such, providing a vector of paths as an argument will be faster than broadcasting across a vector of paths. Because a single file is only accessed by a single thread, it's never worth using more threads than the total number of files being analyzed. There are no quality checks, so it's assumed that each entry is an individual coding sequence, in the correct frame, without 5' or 3' untranslated regions.
 - `ref_vector`: reference subset, which is required for `fop`. `Bool[]` the same length as the number of sequences in your fasta file, and contains `true` for sequences you want as your reference subset and false for those you don't. You can use `find_seqs()` to generate this vector. If providing multiple filepaths and want custom reference sets, `ref_vectors` should be a vector of vectors corresponding to the vector of filepaths.
-- `dict`: codon dictionary of type `codon_dict`. The standard genetic code is loaded by default, but if necessary you can create your own codon dictionary using `make_codon_dict`
-- `rm_start`: whether to ignore the first codon of each sequence. Many organisms use alternative start codons such as TTG and CTG, which in other locations would generally code for leucine. There are a few approaches to deal with this. By default, `CUBScout` keeps each start codon and assigns it as though it were any other codon. Of course, this would slightly change leucine's contribution to codon usage bias. If you set `rm_start` to `true`, the first codon of every sequence is simply discarded. This will also affect the gene's length, which means it could be removed if it falls under the threshold. Other CUB packages (such as R's coRdon, alt.init = TRUE), assign all TTG and CTG codons to methionine, regardless of their location. I disagree with this approach from a biological perspective; those codons still code for leucine most of the time they are used. However, if you want matching output as you would get from coRdon, you can supply `altstart_codon_dict` to the `dict` argument, and keep `rm_start` as `false`.
+- `dict`: codon dictionary of type `CodonDict`. The standard genetic code is loaded by default, but if necessary you can create your own codon dictionary using `make_CodonDict`
+- `rm_start`: whether to ignore the first codon of each sequence. Many organisms use alternative start codons such as TTG and CTG, which in other locations would generally code for leucine. There are a few approaches to deal with this. By default, `CUBScout` keeps each start codon and assigns it as though it were any other codon. Of course, this would slightly change leucine's contribution to codon usage bias. If you set `rm_start` to `true`, the first codon of every sequence is simply discarded. This will also affect the gene's length, which means it could be removed if it falls under the threshold. Other CUB packages (such as R's coRdon, alt.init = TRUE), assign all TTG and CTG codons to methionine, regardless of their location. I disagree with this approach from a biological perspective; those codons still code for leucine most of the time they are used. However, if you want matching output as you would get from coRdon, you can supply `ALTSTART_CodonDict` to the `dict` argument, and keep `rm_start` as `false`.
 - `rm_stop`: whether to remove stop codons from calculations of codon usage bias.
 - `threshold`: minimum length of a gene (in codons) to be used in codon usage bias calculations. By default this is set to 80 codons; any genes less than or equal to that length are discarded. If you want no genes discarded, set `threshold` to 0.
 
 # Examples
 ```jldoctest
-julia> ribosomal_genes = find_seqs(example_data_path, r"ribosomal"); # Get a vector which is true for ribosomal genes
+julia> ribosomal_genes = find_seqs(EXAMPLE_DATA_PATH, r"ribosomal"); # Get a vector which is true for ribosomal genes
 
-julia> result = fop(example_data_path, ribosomal_genes); # Calculate CAI on example dataset
+julia> result = fop(EXAMPLE_DATA_PATH, ribosomal_genes); # Calculate CAI on example dataset
 
 julia> round.(result.FOP[1:5], digits = 6)
 5-element Vector{Float64}:
@@ -213,12 +213,12 @@ julia> round.(result.FOP[1:5], digits = 6)
  0.725
  0.653784
 
-julia> fop(example_data_path, ribosomal_genes, altstart_codon_dict); # Code TTG and CTG as methionine
+julia> fop(EXAMPLE_DATA_PATH, ribosomal_genes, ALTSTART_CodonDict); # Code TTG and CTG as methionine
 
-julia> fop(example_data_path, ribosomal_genes, rm_start = true); # Remove start codons
+julia> fop(EXAMPLE_DATA_PATH, ribosomal_genes, rm_start = true); # Remove start codons
 ```
 """
-function fop(filepath::String, ref_vector::Vector{Bool}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80)
+function fop(filepath::String, ref_vector::Vector{Bool}, dict::CodonDict = DEFAULT_CodonDict; rm_start = false, rm_stop = false, threshold = 80)
     if rm_stop
         uniqueI = dict.uniqueI_nostops
         deg = dict.deg_nostops
@@ -233,7 +233,7 @@ function fop(filepath::String, ref_vector::Vector{Bool}, dict::codon_dict = defa
     return fop(filepath, ref_vector, uniqueI, deg, stop_mask, aa_names, rm_start, threshold)
 end
 
-function fop(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80)
+function fop(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::CodonDict = DEFAULT_CodonDict; rm_start = false, rm_stop = false, threshold = 80)
     len = length(filepaths)
     results = Vector{Any}(undef, len)
     if rm_stop
@@ -284,25 +284,25 @@ function fop(fasta_seq::String, ref_vector::Vector{Bool}, dict_uniqueI::Vector{V
 end
 
 """
-    gcb(filepath::String, dict::codon_dict = default_codon_dict; ref_vector = [], perc = 0.05, rm_start = false, rm_stop = false, threshold = 80)
-    gcb(filepaths::Vector{String}, dict::codon_dict = default_codon_dict; ref_vector = [], perc = 0.05, rm_start = false, rm_stop = false, threshold = 80)
+    gcb(filepath::String, dict::CodonDict = DEFAULT_CodonDict; ref_vector = [], perc = 0.05, rm_start = false, rm_stop = false, threshold = 80)
+    gcb(filepaths::Vector{String}, dict::CodonDict = DEFAULT_CodonDict; ref_vector = [], perc = 0.05, rm_start = false, rm_stop = false, threshold = 80)
 Calculate GCB from Merkl, 2003.
 
 # Arguments
 - `filepath`: path to fasta file of coding sequences (e.g. .fasta, .fna, .fa). There are no quality checks, so it's assumed that each entry is assumed to be an individual coding sequence, in the correct frame, without 5' or 3' untranslated regions.
 - `filepaths`: vector of paths to fasta files of coding sequences (e.g. .fasta, .fna, .fa). `CUBScout` is multithreaded; if there are multiple threads available, `CUBScout` will allocate a thread for each filepath. As such, providing a vector of paths as an argument will be faster than broadcasting across a vector of paths. Because a single file is only accessed by a single thread, it's never worth using more threads than the total number of files being analyzed. There are no quality checks, so it's assumed that each entry is an individual coding sequence, in the correct frame, without 5' or 3' untranslated regions.
-- `dict`: codon dictionary of type `codon_dict`. The standard genetic code is loaded by default, but if necessary you can create your own codon dictionary using `make_codon_dict`
+- `dict`: codon dictionary of type `CodonDict`. The standard genetic code is loaded by default, but if necessary you can create your own codon dictionary using `make_CodonDict`
 - `ref_vector`: optional reference subset; by default gcb begins calculations using all genes as a seed. If you want to provide a custom reference set, it should be a vector `Bool[]` the same length as the number of sequences in your fasta file, and contains `true` for sequences you want as your reference subset and false for those you don't. You can use `find_seqs()` to generate this vector. If providing multiple filepaths and want custom reference sets, `ref_vectors` should be a vector of vectors corresponding to the vector of filepaths.
 - `perc`: percentage of "top hits" which should be used as a reference set in the next iteration. By default set to 0.05. 
-- `rm_start`: whether to ignore the first codon of each sequence. Many organisms use alternative start codons such as TTG and CTG, which in other locations would generally code for leucine. There are a few approaches to deal with this. By default, `CUBScout` keeps each start codon and assigns it as though it were any other codon. Of course, this would slightly change leucine's contribution to codon usage bias. If you set `rm_start` to `true`, the first codon of every sequence is simply discarded. This will also affect the gene's length, which means it could be removed if it falls under the threshold. Other CUB packages (such as R's coRdon, alt.init = TRUE), assign all TTG and CTG codons to methionine, regardless of their location. I disagree with this approach from a biological perspective; those codons still code for leucine most of the time they are used. However, if you want matching output as you would get from coRdon, you can supply `altstart_codon_dict` to the `dict` argument, and keep `rm_start` as `false`.
+- `rm_start`: whether to ignore the first codon of each sequence. Many organisms use alternative start codons such as TTG and CTG, which in other locations would generally code for leucine. There are a few approaches to deal with this. By default, `CUBScout` keeps each start codon and assigns it as though it were any other codon. Of course, this would slightly change leucine's contribution to codon usage bias. If you set `rm_start` to `true`, the first codon of every sequence is simply discarded. This will also affect the gene's length, which means it could be removed if it falls under the threshold. Other CUB packages (such as R's coRdon, alt.init = TRUE), assign all TTG and CTG codons to methionine, regardless of their location. I disagree with this approach from a biological perspective; those codons still code for leucine most of the time they are used. However, if you want matching output as you would get from coRdon, you can supply `ALTSTART_CodonDict` to the `dict` argument, and keep `rm_start` as `false`.
 - `rm_stop`: whether to remove stop codons from calculations of codon usage bias.
 - `threshold`: minimum length of a gene (in codons) to be used in codon usage bias calculations. By default this is set to 80 codons; any genes less than or equal to that length are discarded. If you want no genes discarded, set `threshold` to 0.
 
 # Examples
 ```jldoctest
-julia> ribosomal_genes = find_seqs(example_data_path, r"ribosomal"); # Get a vector which is true for ribosomal genes
+julia> ribosomal_genes = find_seqs(EXAMPLE_DATA_PATH, r"ribosomal"); # Get a vector which is true for ribosomal genes
 
-julia> result = gcb(example_data_path); # Calculate GCB on example dataset
+julia> result = gcb(EXAMPLE_DATA_PATH); # Calculate GCB on example dataset
 
 julia> round.(result.GCB[1:5], digits = 6)
 5-element Vector{Float64}:
@@ -312,7 +312,7 @@ julia> round.(result.GCB[1:5], digits = 6)
  -0.065659
  -0.032062
 
-julia> ribo_result = gcb(example_data_path, ref_vector = ribosomal_genes); # Calculate GCB with ribosomal genes as reference seed example dataset
+julia> ribo_result = gcb(EXAMPLE_DATA_PATH, ref_vector = ribosomal_genes); # Calculate GCB with ribosomal genes as reference seed example dataset
 
 julia> round.(ribo_result.GCB[1:5], digits = 6)
 5-element Vector{Float64}:
@@ -322,12 +322,12 @@ julia> round.(ribo_result.GCB[1:5], digits = 6)
  -0.186104
  -0.01653
 
-julia> gcb(example_data_path, altstart_codon_dict); # Code TTG and CTG as methionine
+julia> gcb(EXAMPLE_DATA_PATH, ALTSTART_CodonDict); # Code TTG and CTG as methionine
 
-julia> gcb(example_data_path, rm_start = true); # Remove start codons
+julia> gcb(EXAMPLE_DATA_PATH, rm_start = true); # Remove start codons
 ```
 """
-function gcb(filepath::String, dict::codon_dict = default_codon_dict; ref_vector = [], perc = 0.05, rm_start = false, rm_stop = false, threshold = 80)
+function gcb(filepath::String, dict::CodonDict = DEFAULT_CodonDict; ref_vector = [], perc = 0.05, rm_start = false, rm_stop = false, threshold = 80)
     if rm_stop
         uniqueI = dict.uniqueI_nostops
         stop_mask = dict.stop_mask
@@ -338,7 +338,7 @@ function gcb(filepath::String, dict::codon_dict = default_codon_dict; ref_vector
     return gcb(filepath, ref_vector, uniqueI, perc, stop_mask, rm_start, threshold)
 end
 
-function gcb(filepaths::Vector{String}, dict::codon_dict = default_codon_dict; ref_vectors = [], perc = 0.05, rm_start = false, rm_stop = false, threshold = 80)
+function gcb(filepaths::Vector{String}, dict::CodonDict = DEFAULT_CodonDict; ref_vectors = [], perc = 0.05, rm_start = false, rm_stop = false, threshold = 80)
     len = length(filepaths)
     results = Vector{Any}(undef, len)
     if rm_stop

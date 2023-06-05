@@ -9,13 +9,13 @@ Codon usage bias can be calculated using the functions `b()`, `enc()`, `enc_p()`
 
     `CUBScout` does not identify ORFs, pause at stop codons, or parse non-nucleotide characters. It is assumed the coding sequences you provide are in-frame and don't contain 5' or 3' untranslated regions. Codons which have non-specific nucleotides, like "W", are skipped. Sequences with characters outside of those recognized by BioSequences will throw an error.
 
-`CUBScout` is loaded with an example dataset, which can accessed at `CUBScout.example_data_path`. This string points to a .fna of coding sequences from *B. subtilis*. Let's calculate ENC for the genes in this file. 
+`CUBScout` is loaded with an example dataset, which can accessed at `CUBScout.EXAMPLE_DATA_PATH`. This string points to a .fna of coding sequences from *B. subtilis*. Let's calculate ENC for the genes in this file. 
 
 ```julia-repl
-julia> example_data_path
+julia> EXAMPLE_DATA_PATH
 "/your/path/to/file/B_subtilis.fna"
 
-julia> enc_result = enc(example_data_path);
+julia> enc_result = enc(EXAMPLE_DATA_PATH);
 
 julia> enc_result.ENC
 3801-element Vector{Float64}:
@@ -51,7 +51,7 @@ julia> enc_result.Identifier
 ENC and SCUO calculate codon usage bias against a theoretical, unbiased distribution, and so simply return a named tuple containing ENC/SCUO and then the gene identifiers. B, ENC', MCB, and MILC calculate an expected codon frequency using a reference set of the genome, and then calculate codon usage bias for each gene against that reference set. As such, these functions return a named tuple which describes which reference set was used, alongside gene identifiers. By default, the codon usage bias is calculated against the codon usage bias of the genome as a whole, which we typically refer to as "self".
 
 ```julia-repl
-julia> b_result = b(example_data_path)
+julia> b_result = b(EXAMPLE_DATA_PATH)
 (self = [0.20912699220973896, 0.3289759448740455, 0.22365336363593893, 0.5391135258658497, 0.24919594143501034, 0.2880358413249049, 0.31200964304415874, 0.34858035204347476, 0.2455189361074733, 0.4690734561271221  …  0.3629137353834403, 0.3621330537227321, 0.4535285720373026, 0.3357858047622507, 0.28183191395624935, 0.2668809561422238, 0.22381338105820905, 0.4034837015709619, 0.3594626865160133, 0.3724863965444541],)
 
 julia> b_result.self
@@ -73,7 +73,7 @@ julia> b_result.self
 Many of these measures rely on the same initial calculations. If you want to calculate all six measures at the same time, use the function `all_cub()`. This only runs these initial calculations once before calculating individual codon usage measures, and as such is more efficient than running all the functions separately. By default, all_cub returns a named tuple, each key of which corresponds to a different codon usage bias measure.
 
 ```julia-repl
-julia> all_cub_result = all_cub(example_data_path);
+julia> all_cub_result = all_cub(EXAMPLE_DATA_PATH);
 
 julia> all_cub_result.B.self
 3801-element Vector{Float64}:
@@ -108,11 +108,11 @@ julia> all_cub_result.ENC.ENC
 
 ## Codon Dictionaries
 
-If you are working with genomes that use the standard genetic code, than feel free to skip this section - you should not need to worry about it. By default, `CUBScout` translates sequences using the standard code, as loaded in `CUBScout.default_codon_dict`. However, if your sequences are translated differently, you will need to provide a custom codon dictionary to `CUBScout`. 
+If you are working with genomes that use the standard genetic code, than feel free to skip this section - you should not need to worry about it. By default, `CUBScout` translates sequences using the standard code, as loaded in `CUBScout.DEFAULT_CodonDict`. However, if your sequences are translated differently, you will need to provide a custom codon dictionary to `CUBScout`. 
 
-Codon dictionaries are of a custom type `codon_dict`. You can use `?codon_dict` to see the information this struct holds, which our codon usage bias functions need to correctly translate codons and calculate codon frequency. However, I recommend you **do not** construct a `codon_dict` manually, but instead make one using the `make_codon_dict()` function. 
+Codon dictionaries are of a custom type `CodonDict`. You can use `?CodonDict` to see the information this struct holds, which our codon usage bias functions need to correctly translate codons and calculate codon frequency. However, I recommend you **do not** construct a `CodonDict` manually, but instead make one using the `make_CodonDict()` function. 
 
-`make_codon_dict` reads a plain text delimited file which lists the 64 codons and their corresponding amino acid. The file should look something like this:
+`make_CodonDict` reads a plain text delimited file which lists the 64 codons and their corresponding amino acid. The file should look something like this:
 
 ```
 AAA    Lysine
@@ -130,17 +130,17 @@ Please follow these formatting guidelines to make sure the table is parsed corre
 - Stop codons can be coded as Stop, stop, STOP, or *. 
 - If delimited using any character outside of tab, supply the delimiter as the second argument as a `Char`, not a `String` (e.g. `','` not `","`). 
 
-`make_codon_dict` uses `readdlm` from `DelimitedFiles`; it's a good idea to check whether `readdlm` parses your file correctly before passing to `make_codon_dict`.
+`make_CodonDict` uses `readdlm` from `DelimitedFiles`; it's a good idea to check whether `readdlm` parses your file correctly before passing to `make_CodonDict`.
 
-For demonstration purposes, `CUBScout` includes the delimited file used to construct the `default_codon_dict`. 
+For demonstration purposes, `CUBScout` includes the delimited file used to construct the `DEFAULT_CodonDict`. 
 
 ```julia-repl
-julia> codon_dict_path
+julia> CodonDict_PATH
 "your/path/to/codon_dict.txt"
 
-julia> our_codon_dict = make_codon_dict(codon_dict_path);
+julia> our_CodonDict = make_CodonDict(CodonDict_PATH);
 
-julia> our_codon_dict.codons
+julia> our_CodonDict.codons
 64-element Vector{BioSequences.LongSequence{BioSequences.DNAAlphabet{2}}}:
  AAA
  AAC
@@ -148,7 +148,7 @@ julia> our_codon_dict.codons
  AAT
 [...]
 
-julia> our_codon_dict.AA
+julia> our_CodonDict.AA
 64-element Vector{String}:
  "Lysine"
  "Asparagine"
@@ -160,7 +160,7 @@ julia> our_codon_dict.AA
 You can supply your custom codon dictionary to any of the codon usage bias functions as the second argument.
 
 ```julia-repl
-julia> milc(example_data_path, our_codon_dict)
+julia> milc(EXAMPLE_DATA_PATH, our_CodonDict)
 (self = [0.49482573202153163, 0.5839439121281993, 0.49947166558087047, 0.6354929447434434, 0.5439352548027006, 0.6104721251245075, 0.6256398806438782, 0.6228376952086359, 0.5355298113407091, 0.7832276821181443  …  0.5968814155010973, 0.5964500002803941, 0.5930680822246766, 0.5412999510428169, 0.49866919389111675, 0.5830959504630727, 0.5139438478694085, 0.6164434557282711, 0.6018041071661588, 0.48775477465069617],)
 ```
 
@@ -170,10 +170,10 @@ julia> milc(example_data_path, our_codon_dict)
 
 If you would like to disregard start codons entirely, set the argument `rm_start = true`. This will decrease the length of each gene sequence by one, but is my preferred method to dealing with alternative start codons.
 
-Other packages to calculate codon usage bias, such as [coRdon](https://www.bioconductor.org/packages/release/bioc/html/coRdon.html), handle alternative start codons differently. They encode all TTG and CTG codons as methionine, regardless of their location in the gene. While I disagree with this approach from a biological perspective, you can implement it using the pre-loaded `altstart_codon_dict`. 
+Other packages to calculate codon usage bias, such as [coRdon](https://www.bioconductor.org/packages/release/bioc/html/coRdon.html), handle alternative start codons differently. They encode all TTG and CTG codons as methionine, regardless of their location in the gene. While I disagree with this approach from a biological perspective, you can implement it using the pre-loaded `ALTSTART_CodonDict`. 
 
 ```julia-repl
-julia> scuo_result = scuo(example_data_path, altstart_codon_dict);
+julia> scuo_result = scuo(EXAMPLE_DATA_PATH, ALTSTART_CodonDict);
 
 julia> scuo_result.SCUO
 3801-element Vector{Float64}:
@@ -197,7 +197,7 @@ B, ENC', MCB, and MILC all calculate an expected codon frequency using a referen
 First, you'll need a Boolean vector, whose length matches the number of sequences in your fasta file. Genes which you want included in your subset should be `true`; the rest of the vector should be `false`. One way to make this vector is with the `find_seqs` function to look for genes with specific functions.
 
 ```julia-repl
-julia> ribosomal_genes = find_seqs(example_data_path, r"ribosomal")
+julia> ribosomal_genes = find_seqs(EXAMPLE_DATA_PATH, r"ribosomal")
 4237-element Vector{Bool}:
  0
  0
@@ -217,7 +217,7 @@ julia> ribosomal_genes = find_seqs(example_data_path, r"ribosomal")
     `CUBScout` is designed not to hold the data from your fasta file as an object in your Julia environment. If you want to get sequence identifiers or descriptions outside of codon usage bias functions, there are the convenience functions `seq_names` and `seq_descriptions`:
     
     ```julia-repl
-    julia> seq_names(example_data_path)[1:5]
+    julia> seq_names(EXAMPLE_DATA_PATH)[1:5]
     5-element Vector{String}:
      "lcl|NC_000964.3_cds_NP_387882.1_1"
      "lcl|NC_000964.3_cds_NP_387883.1_2"
@@ -225,13 +225,13 @@ julia> ribosomal_genes = find_seqs(example_data_path, r"ribosomal")
      "lcl|NC_000964.3_cds_NP_387885.1_4"
      "lcl|NC_000964.3_cds_NP_387886.2_5"
 
-    julia> seq_descriptions(example_data_path)[1]
+    julia> seq_descriptions(EXAMPLE_DATA_PATH)[1]
     "lcl|NC_000964.3_cds_NP_387882.1_1 [gene=dnaA] [locus_tag=BSU_00010] [db_xref=EnsemblGenomes-Gn:BSU00010,EnsemblGenomes-Tr:CAB11777,GOA:P05648,InterPro:IPR001957,InterPro:IPR003593,InterPro:IPR010921,InterPro:IPR013159,InterPro:IPR013317,InterPro:IPR018312,InterPro:IPR020591,InterPro:IPR024633,InterPro:IPR027417,PDB:4TPS,SubtiList:BG10065,UniProtKB/Swiss-Prot:P05648] [protein=chromosomal replication initiator informational ATPase] [protein_id=NP_387882.1] [location=410..1750] [gbkey=CDS]"
     ```
 Once you have your reference vector, you can supply an argument to `ref_seqs` as a named tuple. If you have multiple reference sets you want to use, those can be included as additional entries in the `ref_seqs` tuple.
 
 ```julia-repl
-julia> b_ribo_result = b(example_data_path, ref_seqs = (ribosomal = ribosomal_genes,));
+julia> b_ribo_result = b(EXAMPLE_DATA_PATH, ref_seqs = (ribosomal = ribosomal_genes,));
 
 julia> b_ribo_result.ribosomal
 3801-element Vector{Float64}:
@@ -248,7 +248,7 @@ julia> b_ribo_result.ribosomal
  0.3758568749612823
  0.4379807676614555
 
-julia> dna_genes = find_seqs(example_data_path, r"dna|DNA|Dna")
+julia> dna_genes = find_seqs(EXAMPLE_DATA_PATH, r"dna|DNA|Dna")
 4237-element Vector{Bool}:
  1
  1
@@ -263,7 +263,7 @@ julia> dna_genes = find_seqs(example_data_path, r"dna|DNA|Dna")
  0
  0
 
-julia> b_multi_result = b(example_data_path, ref_seqs = (ribosomal = ribosomal_genes, DNA = dna_genes));
+julia> b_multi_result = b(EXAMPLE_DATA_PATH, ref_seqs = (ribosomal = ribosomal_genes, DNA = dna_genes));
 
 julia> b_multi_result.ribosomal
 3801-element Vector{Float64}:
@@ -307,9 +307,9 @@ Whether to remove stop codons from the calculation of codon usage bias. Default 
 The minimum length of a gene in codons to be used when calculating codon usage bias. The default is 80; all genes under that length are discarded. If you want to discard no genes, set `threshold = 0`. You do **not** need to adjust your reference sequence vector when adjusting threshold values.
 
 ```julia-repl
-julia> b_result_0 = b(example_data_path, threshold = 0);
+julia> b_result_0 = b(EXAMPLE_DATA_PATH, threshold = 0);
 
-julia> b_result_300 = b(example_data_path, threshold = 300);
+julia> b_result_300 = b(EXAMPLE_DATA_PATH, threshold = 300);
 
 julia> length(b_result_0.self)
 4237
@@ -323,14 +323,14 @@ julia> length(b_result_300.self)
 Often, you might have a directory containing multiple .fna files, each of which you want to analyze. You can provide a vector of filepaths to any `CUBScout` function, which will return a vector of results. If supplying `ref_seqs`, provide a vector of named tuples corresponding to each file. `CUBScout` is multi-threaded, and if Julia is started with multiple threads, will assign individual threads to process individual files. This means you *should not broadcast* `CUBScout` functions as it will reduce efficiency. Also each file is only ever processed by a single thread, so using more threads than you have files is unnecessary. 
 
 ```julia-repl
-julia> enc_p([example_data_path,example_data_path])
+julia> enc_p([EXAMPLE_DATA_PATH,EXAMPLE_DATA_PATH])
 2-element Vector{Any}:
  self = [61.0, 59.36979815371983, 60.7494622549966, 61.0, ...],
  Identifier = ["lcl|NC_000964.3_cds_NP_387882.1_1", "lcl|NC_000964.3_cds_NP_387883.1_2", ...]),
  self = [61.0, 59.36979815371983, 60.7494622549966, 61.0, ...],
  Identifier = ["lcl|NC_000964.3_cds_NP_387882.1_1", "lcl|NC_000964.3_cds_NP_387883.1_2", ...])
 
-julia> enc_p([example_data_path,example_data_path], ref_seqs = [(ribosomal = ribosomal_genes,), (ribosomal = ribosomal_genes,)])
+julia> enc_p([EXAMPLE_DATA_PATH,EXAMPLE_DATA_PATH], ref_seqs = [(ribosomal = ribosomal_genes,), (ribosomal = ribosomal_genes,)])
 2-element Vector{Any}:
  self = [61.0, 58.88817312982425, 56.41038374603565, 61.0, ...],
  Identifier = ["lcl|NC_000964.3_cds_NP_387882.1_1", "lcl|NC_000964.3_cds_NP_387883.1_2", ...]),
