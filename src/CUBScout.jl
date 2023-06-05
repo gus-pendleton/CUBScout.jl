@@ -1,6 +1,5 @@
 module CUBScout
 
-    using DataFrames
     using FASTX
     using DelimitedFiles
     using BioSequences

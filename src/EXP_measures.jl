@@ -1,7 +1,7 @@
 
 """
-    melp(filepath::String, ref_vector::Vector{Bool}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
-    melp(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
+    melp(filepath::String, ref_vector::Vector{Bool}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80)
+    melp(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80)
 Calculate MELP from Supek and Vlahovicek, 2005.
 
 # Arguments
@@ -12,7 +12,6 @@ Calculate MELP from Supek and Vlahovicek, 2005.
 - `rm_start`: whether to ignore the first codon of each sequence. Many organisms use alternative start codons such as TTG and CTG, which in other locations would generally code for leucine. There are a few approaches to deal with this. By default, `CUBScout` keeps each start codon and assigns it as though it were any other codon. Of course, this would slightly change leucine's contribution to codon usage bias. If you set `rm_start` to `true`, the first codon of every sequence is simply discarded. This will also affect the gene's length, which means it could be removed if it falls under the threshold. Other CUB packages (such as R's coRdon, alt.init = TRUE), assign all TTG and CTG codons to methionine, regardless of their location. I disagree with this approach from a biological perspective; those codons still code for leucine most of the time they are used. However, if you want matching output as you would get from coRdon, you can supply `altstart_codon_dict` to the `dict` argument, and keep `rm_start` as `false`.
 - `rm_stop`: whether to remove stop codons from calculations of codon usage bias.
 - `threshold`: minimum length of a gene (in codons) to be used in codon usage bias calculations. By default this is set to 80 codons; any genes less than or equal to that length are discarded. If you want no genes discarded, set `threshold` to 0.
-- `dataframe`: whether to format output as a dataframe. By default results are returned as vectors. Setting `dataframe = true` will instead output a dataframe, though at a slight performance cost.
 
 # Examples
 ```jldoctest
@@ -31,36 +30,22 @@ julia> round.(result.MELP[1:5], digits = 6)
 julia> melp(example_data_path, ribosomal_genes, altstart_codon_dict); # Code TTG and CTG as methionine
 
 julia> melp(example_data_path, ribosomal_genes, rm_start = true); # Remove start codons
-
-julia> melp(example_data_path, ribosomal_genes, dataframe = true); # Get output in dataframe format
 ```
 """
-function melp(filepath::String, ref_vector::Vector{Bool}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
-    milcs = milc(filepath, dict, ref_seqs = (self = fill(true, length(ref_vector)), reference = ref_vector), rm_start = rm_start, rm_stop = rm_stop, threshold = threshold, dataframe = dataframe)
-    
-    if dataframe
-    milcs[!,:MELP] = milcs[!,:self] ./ milcs[!,:reference]
-    return milcs
-    end
-
+function melp(filepath::String, ref_vector::Vector{Bool}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80)
+    milcs = milc(filepath, dict, ref_seqs = (self = fill(true, length(ref_vector)), reference = ref_vector), rm_start = rm_start, rm_stop = rm_stop, threshold = threshold)
     return (MELP = milcs.self ./ milcs.reference, Identifier = milcs.Identifier)
 end
 
-function melp(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
+function melp(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80)
     ref_tuples = map(x->(self = fill(true, length(x)), reference = x), ref_vectors)
-    milcs = milc(filepaths, dict, ref_seqs = ref_tuples, rm_start = rm_start, rm_stop = rm_stop, threshold = threshold, dataframe = dataframe)
-
-    if dataframe
-    milcs[!,:MELP] = milcs[!,:self] ./ milcs[!,:reference]
-    return milcs
-    end
-
+    milcs = milc(filepaths, dict, ref_seqs = ref_tuples, rm_start = rm_start, rm_stop = rm_stop, threshold = threshold)
     return map(x->(MELP = x.self ./ x.reference, x.Identifier), milcs)
 end
 
 """
-    e(filepath::String, ref_vector::Vector{Bool}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
-    e(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
+    e(filepath::String, ref_vector::Vector{Bool}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80)
+    e(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80)
 Calculate E from Karlin and Mrazek, 1996.
 
 # Arguments
@@ -71,7 +56,6 @@ Calculate E from Karlin and Mrazek, 1996.
 - `rm_start`: whether to ignore the first codon of each sequence. Many organisms use alternative start codons such as TTG and CTG, which in other locations would generally code for leucine. There are a few approaches to deal with this. By default, `CUBScout` keeps each start codon and assigns it as though it were any other codon. Of course, this would slightly change leucine's contribution to codon usage bias. If you set `rm_start` to `true`, the first codon of every sequence is simply discarded. This will also affect the gene's length, which means it could be removed if it falls under the threshold. Other CUB packages (such as R's coRdon, alt.init = TRUE), assign all TTG and CTG codons to methionine, regardless of their location. I disagree with this approach from a biological perspective; those codons still code for leucine most of the time they are used. However, if you want matching output as you would get from coRdon, you can supply `altstart_codon_dict` to the `dict` argument, and keep `rm_start` as `false`.
 - `rm_stop`: whether to remove stop codons from calculations of codon usage bias.
 - `threshold`: minimum length of a gene (in codons) to be used in codon usage bias calculations. By default this is set to 80 codons; any genes less than or equal to that length are discarded. If you want no genes discarded, set `threshold` to 0.
-- `dataframe`: whether to format output as a dataframe. By default results are returned as vectors. Setting `dataframe = true` will instead output a dataframe, though at a slight performance cost.
 
 # Examples
 ```jldoctest
@@ -90,36 +74,24 @@ julia> round.(result.E[1:5], digits = 6)
 julia> e(example_data_path, ribosomal_genes, altstart_codon_dict); # Code TTG and CTG as methionine
 
 julia> e(example_data_path, ribosomal_genes, rm_start = true); # Remove start codons
-
-julia> e(example_data_path, ribosomal_genes, dataframe = true); # Get output in dataframe format
 ```
 """
-function e(filepath::String, ref_vector::Vector{Bool}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
-    bs = b(filepath, dict, ref_seqs = (self = fill(true, length(ref_vector)), reference = ref_vector), rm_start = rm_start, rm_stop = rm_stop, threshold = threshold, dataframe = dataframe)
+function e(filepath::String, ref_vector::Vector{Bool}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80)
+    bs = b(filepath, dict, ref_seqs = (self = fill(true, length(ref_vector)), reference = ref_vector), rm_start = rm_start, rm_stop = rm_stop, threshold = threshold)
     
-    if dataframe
-    bs[!,:E] = bs[!,:self] ./ bs[!,:reference]
-    return bs
-    end
-
     return (E = bs.self ./ bs.reference, Identifier = bs.Identifier)
 end
 
-function e(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
+function e(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80)
     ref_tuples = map(x->(self = fill(true, length(x)), reference = x), ref_vectors)
-    bs = b(filepaths, dict, ref_seqs = ref_tuples, rm_start = rm_start, rm_stop = rm_stop, threshold = threshold, dataframe = dataframe)
-
-    if dataframe
-    bs[!,:MELP] = bs[!,:self] ./ bs[!,:reference]
-    return bs
-    end
+    bs = b(filepaths, dict, ref_seqs = ref_tuples, rm_start = rm_start, rm_stop = rm_stop, threshold = threshold)
 
     return map(x->(E = x.self ./ x.reference, Identifer = x.Identifier), bs)
 end
 
 """
-    cai(filepath::String, ref_vector::Vector{Bool}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
-    cai(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
+    cai(filepath::String, ref_vector::Vector{Bool}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80)
+    cai(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80)
 Calculate CAI from Sharp and Li, 1987.
 
 # Arguments
@@ -130,7 +102,6 @@ Calculate CAI from Sharp and Li, 1987.
 - `rm_start`: whether to ignore the first codon of each sequence. Many organisms use alternative start codons such as TTG and CTG, which in other locations would generally code for leucine. There are a few approaches to deal with this. By default, `CUBScout` keeps each start codon and assigns it as though it were any other codon. Of course, this would slightly change leucine's contribution to codon usage bias. If you set `rm_start` to `true`, the first codon of every sequence is simply discarded. This will also affect the gene's length, which means it could be removed if it falls under the threshold. Other CUB packages (such as R's coRdon, alt.init = TRUE), assign all TTG and CTG codons to methionine, regardless of their location. I disagree with this approach from a biological perspective; those codons still code for leucine most of the time they are used. However, if you want matching output as you would get from coRdon, you can supply `altstart_codon_dict` to the `dict` argument, and keep `rm_start` as `false`.
 - `rm_stop`: whether to remove stop codons from calculations of codon usage bias.
 - `threshold`: minimum length of a gene (in codons) to be used in codon usage bias calculations. By default this is set to 80 codons; any genes less than or equal to that length are discarded. If you want no genes discarded, set `threshold` to 0.
-- `dataframe`: whether to format output as a dataframe. By default results are returned as vectors. Setting `dataframe = true` will instead output a dataframe, though at a slight performance cost.
 
 # Examples
 ```jldoctest
@@ -149,11 +120,9 @@ julia> round.(result.CAI[1:5], digits = 6)
 julia> cai(example_data_path, ribosomal_genes, altstart_codon_dict); # Code TTG and CTG as methionine
 
 julia> cai(example_data_path, ribosomal_genes, rm_start = true); # Remove start codons
-
-julia> cai(example_data_path, ribosomal_genes, dataframe = true); # Get output in dataframe format
 ```
 """
-function cai(filepath::String, ref_vector::Vector{Bool}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
+function cai(filepath::String, ref_vector::Vector{Bool}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80)
     if rm_stop
         uniqueI = dict.uniqueI_nostops
         deg = dict.deg_nostops
@@ -165,10 +134,10 @@ function cai(filepath::String, ref_vector::Vector{Bool}, dict::codon_dict = defa
         stop_mask = fill(true,64)
         aa_names = dict.AA
     end
-    return cai(filepath, ref_vector, uniqueI, deg, stop_mask, aa_names, rm_start, threshold, dataframe)
+    return cai(filepath, ref_vector, uniqueI, deg, stop_mask, aa_names, rm_start, threshold)
 end
 
-function cai(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
+function cai(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80)
     len = length(filepaths)
     results = Vector{Any}(undef, len)
     if rm_stop
@@ -184,14 +153,13 @@ function cai(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict:
     end
 
     Threads.@threads for i in 1:len
-                @inbounds results[i] = cai(filepaths[i], ref_vectors[i], uniqueI, deg, stop_mask, aa_names, rm_start, threshold, dataframe)
+                @inbounds results[i] = cai(filepaths[i], ref_vectors[i], uniqueI, deg, stop_mask, aa_names, rm_start, threshold)
     end
-    dataframe && return reduce(vcat, results)
     return results
 end
 
 
-function cai(fasta_seq::String, ref_vector::Vector{Bool}, dict_uniqueI::Vector{Vector{Int32}}, dict_deg::Vector{Int32}, stop_mask::Vector{Bool}, aa_names::Vector{String}, rm_start::Bool, threshold::Integer, dataframe)
+function cai(fasta_seq::String, ref_vector::Vector{Bool}, dict_uniqueI::Vector{Vector{Int32}}, dict_deg::Vector{Int32}, stop_mask::Vector{Bool}, aa_names::Vector{String}, rm_start::Bool, threshold::Integer)
     counts = count_codons(fasta_seq, rm_start, threshold)# Count codons in each gene 
     count_matrix = counts[1]
     names = counts[2] 
@@ -213,14 +181,13 @@ function cai(fasta_seq::String, ref_vector::Vector{Bool}, dict_uniqueI::Vector{V
     mult = @. log(normfreq / max_aa) * count_matrix
     mult = remove_nan.(mult,0)
     cai_result = vec(exp.(sum(mult, dims = 1) ./ sum(count_matrix, dims = 1)))
-    dataframe && return DataFrame(CAI = cai_result, Identifier = names, File = fasta_seq)
     return (CAI = cai_result, Identifier = names)
 end
 
 
 """
-    fop(filepath::String, ref_vector::Vector{Bool}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
-    fop(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
+    fop(filepath::String, ref_vector::Vector{Bool}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80)
+    fop(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80)
 Calculate FOP from Ikemura, 1981.
 
 # Arguments
@@ -231,7 +198,6 @@ Calculate FOP from Ikemura, 1981.
 - `rm_start`: whether to ignore the first codon of each sequence. Many organisms use alternative start codons such as TTG and CTG, which in other locations would generally code for leucine. There are a few approaches to deal with this. By default, `CUBScout` keeps each start codon and assigns it as though it were any other codon. Of course, this would slightly change leucine's contribution to codon usage bias. If you set `rm_start` to `true`, the first codon of every sequence is simply discarded. This will also affect the gene's length, which means it could be removed if it falls under the threshold. Other CUB packages (such as R's coRdon, alt.init = TRUE), assign all TTG and CTG codons to methionine, regardless of their location. I disagree with this approach from a biological perspective; those codons still code for leucine most of the time they are used. However, if you want matching output as you would get from coRdon, you can supply `altstart_codon_dict` to the `dict` argument, and keep `rm_start` as `false`.
 - `rm_stop`: whether to remove stop codons from calculations of codon usage bias.
 - `threshold`: minimum length of a gene (in codons) to be used in codon usage bias calculations. By default this is set to 80 codons; any genes less than or equal to that length are discarded. If you want no genes discarded, set `threshold` to 0.
-- `dataframe`: whether to format output as a dataframe. By default results are returned as vectors. Setting `dataframe = true` will instead output a dataframe, though at a slight performance cost.
 
 # Examples
 ```jldoctest
@@ -250,11 +216,9 @@ julia> round.(result.FOP[1:5], digits = 6)
 julia> fop(example_data_path, ribosomal_genes, altstart_codon_dict); # Code TTG and CTG as methionine
 
 julia> fop(example_data_path, ribosomal_genes, rm_start = true); # Remove start codons
-
-julia> fop(example_data_path, ribosomal_genes, dataframe = true); # Get output in dataframe format
 ```
 """
-function fop(filepath::String, ref_vector::Vector{Bool}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
+function fop(filepath::String, ref_vector::Vector{Bool}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80)
     if rm_stop
         uniqueI = dict.uniqueI_nostops
         deg = dict.deg_nostops
@@ -266,10 +230,10 @@ function fop(filepath::String, ref_vector::Vector{Bool}, dict::codon_dict = defa
         stop_mask = fill(true,64)
         aa_names = dict.AA
     end
-    return fop(filepath, ref_vector, uniqueI, deg, stop_mask, aa_names, rm_start, threshold, dataframe)
+    return fop(filepath, ref_vector, uniqueI, deg, stop_mask, aa_names, rm_start, threshold)
 end
 
-function fop(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
+function fop(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::codon_dict = default_codon_dict; rm_start = false, rm_stop = false, threshold = 80)
     len = length(filepaths)
     results = Vector{Any}(undef, len)
     if rm_stop
@@ -285,15 +249,14 @@ function fop(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict:
     end
   
     Threads.@threads for i in 1:len
-                @inbounds results[i] = fop(filepaths[i], ref_vectors[i], uniqueI, deg, stop_mask, aa_names, rm_start, threshold, dataframe)
+                @inbounds results[i] = fop(filepaths[i], ref_vectors[i], uniqueI, deg, stop_mask, aa_names, rm_start, threshold)
              
     end
-    dataframe && return reduce(vcat, results)
     return results
 end
 
 
-function fop(fasta_seq::String, ref_vector::Vector{Bool}, dict_uniqueI::Vector{Vector{Int32}}, dict_deg::Vector{Int32}, stop_mask::Vector{Bool}, aa_names::Vector{String}, rm_start::Bool, threshold::Integer, dataframe::Bool)
+function fop(fasta_seq::String, ref_vector::Vector{Bool}, dict_uniqueI::Vector{Vector{Int32}}, dict_deg::Vector{Int32}, stop_mask::Vector{Bool}, aa_names::Vector{String}, rm_start::Bool, threshold::Integer)
     counts = count_codons(fasta_seq, rm_start, threshold)# Count codons in each gene 
     count_matrix = counts[1]
     names = counts[2] 
@@ -316,14 +279,13 @@ function fop(fasta_seq::String, ref_vector::Vector{Bool}, dict_uniqueI::Vector{V
     count2 = copy(count_matrix)
     count2[ra .< 0.9] .= 0
     fops = vec(sum(count2, dims = 1) ./ sum(count_matrix, dims = 1))
-    dataframe && return DataFrame(FOP = fops, Identifier = names, File = fasta_seq)
     return (FOP = fops, Identifier = names)
 
 end
 
 """
-    gcb(filepath::String, dict::codon_dict = default_codon_dict; ref_vector = [], perc = 0.05, rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
-    gcb(filepaths::Vector{String}, dict::codon_dict = default_codon_dict; ref_vector = [], perc = 0.05, rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
+    gcb(filepath::String, dict::codon_dict = default_codon_dict; ref_vector = [], perc = 0.05, rm_start = false, rm_stop = false, threshold = 80)
+    gcb(filepaths::Vector{String}, dict::codon_dict = default_codon_dict; ref_vector = [], perc = 0.05, rm_start = false, rm_stop = false, threshold = 80)
 Calculate GCB from Merkl, 2003.
 
 # Arguments
@@ -335,7 +297,6 @@ Calculate GCB from Merkl, 2003.
 - `rm_start`: whether to ignore the first codon of each sequence. Many organisms use alternative start codons such as TTG and CTG, which in other locations would generally code for leucine. There are a few approaches to deal with this. By default, `CUBScout` keeps each start codon and assigns it as though it were any other codon. Of course, this would slightly change leucine's contribution to codon usage bias. If you set `rm_start` to `true`, the first codon of every sequence is simply discarded. This will also affect the gene's length, which means it could be removed if it falls under the threshold. Other CUB packages (such as R's coRdon, alt.init = TRUE), assign all TTG and CTG codons to methionine, regardless of their location. I disagree with this approach from a biological perspective; those codons still code for leucine most of the time they are used. However, if you want matching output as you would get from coRdon, you can supply `altstart_codon_dict` to the `dict` argument, and keep `rm_start` as `false`.
 - `rm_stop`: whether to remove stop codons from calculations of codon usage bias.
 - `threshold`: minimum length of a gene (in codons) to be used in codon usage bias calculations. By default this is set to 80 codons; any genes less than or equal to that length are discarded. If you want no genes discarded, set `threshold` to 0.
-- `dataframe`: whether to format output as a dataframe. By default results are returned as vectors. Setting `dataframe = true` will instead output a dataframe, though at a slight performance cost.
 
 # Examples
 ```jldoctest
@@ -364,11 +325,9 @@ julia> round.(ribo_result.GCB[1:5], digits = 6)
 julia> gcb(example_data_path, altstart_codon_dict); # Code TTG and CTG as methionine
 
 julia> gcb(example_data_path, rm_start = true); # Remove start codons
-
-julia> gcb(example_data_path, dataframe = true); # Get output in dataframe format
 ```
 """
-function gcb(filepath::String, dict::codon_dict = default_codon_dict; ref_vector = [], perc = 0.05, rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
+function gcb(filepath::String, dict::codon_dict = default_codon_dict; ref_vector = [], perc = 0.05, rm_start = false, rm_stop = false, threshold = 80)
     if rm_stop
         uniqueI = dict.uniqueI_nostops
         stop_mask = dict.stop_mask
@@ -376,10 +335,10 @@ function gcb(filepath::String, dict::codon_dict = default_codon_dict; ref_vector
         uniqueI = dict.uniqueI
         stop_mask = fill(true,64)
     end
-    return gcb(filepath, ref_vector, uniqueI, perc, stop_mask, rm_start, threshold,dataframe)
+    return gcb(filepath, ref_vector, uniqueI, perc, stop_mask, rm_start, threshold)
 end
 
-function gcb(filepaths::Vector{String}, dict::codon_dict = default_codon_dict; ref_vectors = [], perc = 0.05, rm_start = false, rm_stop = false, threshold = 80, dataframe = false)
+function gcb(filepaths::Vector{String}, dict::codon_dict = default_codon_dict; ref_vectors = [], perc = 0.05, rm_start = false, rm_stop = false, threshold = 80)
     len = length(filepaths)
     results = Vector{Any}(undef, len)
     if rm_stop
@@ -391,19 +350,18 @@ function gcb(filepaths::Vector{String}, dict::codon_dict = default_codon_dict; r
     end
     if isempty(ref_vectors)
         Threads.@threads for i in 1:len
-           @inbounds results[i] = gcb(filepaths[i], ref_vectors, uniqueI, perc, stop_mask, rm_start, threshold, dataframe)
+           @inbounds results[i] = gcb(filepaths[i], ref_vectors, uniqueI, perc, stop_mask, rm_start, threshold)
             end
     else
             Threads.@threads for i in 1:len
-                @inbounds results[i] = gcb(filepaths[i], ref_vectors[i], uniqueI, perc, stop_mask, rm_start, threshold, dataframe)
+                @inbounds results[i] = gcb(filepaths[i], ref_vectors[i], uniqueI, perc, stop_mask, rm_start, threshold)
              end
     end
-    dataframe && return reduce(vcat, results)
     return results
 end
 
 
-function gcb(fasta_seq::String, refs, dict_uniqueI, perc, stop_mask::Vector{Bool}, rm_start::Bool, threshold::Integer, dataframe)
+function gcb(fasta_seq::String, refs, dict_uniqueI, perc, stop_mask::Vector{Bool}, rm_start::Bool, threshold::Integer)
     counts = count_codons(fasta_seq, rm_start, threshold)# Count codons in each gene 
     count_matrix = counts[1]
     names = counts[2] 
@@ -436,7 +394,6 @@ function gcb(fasta_seq::String, refs, dict_uniqueI, perc, stop_mask::Vector{Bool
         seed[tops] .= true
         normsetfreq = normTotalFreq(count_matrix[:,seed], countAA[:,seed], dict_uniqueI)
     end
-    dataframe && return DataFrame(GCB = gcb, Identifier = names, File = fasta_seq)
     return (GCB = gcb, Identifier = names)
 end
 
