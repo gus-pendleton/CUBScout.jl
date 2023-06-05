@@ -26,7 +26,7 @@ function count_codons!(
         if value == 0xff
             throw(DomainError(codeunit, "Cannot interpret as nucleotide"))
         elseif value == 0xf0
-            remaining = 5 # This will "skip" this Kmer entirely, but keep us in frame
+            remaining += 3 # This will "skip" this Kmer entirely, but keep us in frame
         else
             remaining -= 1
             kmer = (kmer << 2 | value) & mask # This needed to be moved outside of the second if block
@@ -44,7 +44,7 @@ function count_codons(reader::FASTAReader, remove_start, threshold)
     result = Int32[]
     names = String[]
     length_passes = Bool[]
-    remove_start ? (rem = 6) : (rem = 3)
+    rem = remove_start ? 6 : 3
         for record in reader
             count_codons!(buffer, sequence(record), rem)
             length_pass = sum(buffer) > threshold
