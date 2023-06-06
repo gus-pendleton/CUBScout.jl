@@ -529,7 +529,7 @@ function gcb(
     threshold::Integer,
 )
     counts = count_codons(fasta_seq, rm_start, threshold)# Count codons in each gene 
-    @inbounds count_matrix = @iews counts[1]
+    @inbounds count_matrix = @views counts[1]
     @inbounds names = @views counts[2]
     @inbounds count_matrix = @views count_matrix[stop_mask, :] # Remove entries if removing stop codons
     seqs = @views size(count_matrix, 2) # Count how many genes we have
