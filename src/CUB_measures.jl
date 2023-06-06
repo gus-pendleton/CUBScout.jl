@@ -967,7 +967,7 @@ function all_cub(
     # Calculate ENC
     pi_vec = enc_pi(count_matrix, countAA, seqs, dict_uniqueI)
     @inbounds enc_fa = @. (countAA * pi_vec - 1) / (countAA - 1)
-    @inboudns enc_fa[isnan.(enc_fa)] .= 0.0
+    @inbounds enc_fa[isnan.(enc_fa)] .= 0.0
     ENC_result = (ENC = vec(eFFNc(enc_fa, dict_deg)),)
     # End calculating ENC (ENC is the result)
 
