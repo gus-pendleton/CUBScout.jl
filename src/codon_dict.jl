@@ -73,7 +73,7 @@ end
 
 const CodonDict_PATH = joinpath(artifact"codon_dict", "codon_dict.txt")
 
-const DEFAULT_CodonDict = make_codon_dict(CodonDict_path)
+const DEFAULT_CodonDict = make_CodonDict(CodonDict_PATH)
 
 const ALTSTART_CodonDict = make_CodonDict(joinpath(artifact"codon_dict_altstart", "codon_dict_altstart.txt"))
 

@@ -161,26 +161,26 @@ end
 
 function cai(fasta_seq::String, ref_vector::Vector{Bool}, dict_uniqueI::Vector{Vector{Int32}}, dict_deg::Vector{Int32}, stop_mask::Vector{Bool}, aa_names::Vector{String}, rm_start::Bool, threshold::Integer)
     counts = count_codons(fasta_seq, rm_start, threshold)# Count codons in each gene 
-    count_matrix = counts[1]
-    names = counts[2] 
-    count_matrix = count_matrix[stop_mask,:] # Remove entries if removing stop codons
+    @inbounds count_matrix = @views counts[1]
+    @inbounds names = @views counts[2] 
+    @inbounds count_matrix = @views count_matrix[stop_mask,:] # Remove entries if removing stop codons
     seqs = @views size(count_matrix, 2) # Count how many genes we have
 
-    ref_seqs = (self = fill(true, seqs), reference = ref_vector[counts[3]])
+    @inbounds ref_seqs = (self = fill(true, seqs), reference = ref_vector[counts[3]])
     
     countAA = countsbyAA(count_matrix,dict_uniqueI) # This is the same for all measures
     normfreq = normFrequency(count_matrix, countAA, seqs, dict_uniqueI) 
-    normsetfreqs = map(x->normTotalFreq(count_matrix[:,x], countAA[:,x], dict_uniqueI), ref_seqs)
+    @inbounds normsetfreqs = @views map(x->normTotalFreq(count_matrix[:,x], countAA[:,x], dict_uniqueI), ref_seqs)
     max_aa = fill(0.0, length(aa_names))
     map(dict_uniqueI) do aa
-        max_aa[aa] .= maximum(normsetfreqs.reference[aa])
+        @inbounds max_aa[aa] .= maximum(normsetfreqs.reference[aa])
     end
-    max_aa[max_aa .== 0] .= 0.5
-    nodeg =  dict_uniqueI[dict_deg .== 1]
-    map(x->count_matrix[x,:] .= 0,nodeg)
-    mult = @. log(normfreq / max_aa) * count_matrix
+    @inbounds max_aa[max_aa .== 0] .= 0.5
+    @inbounds nodeg =  dict_uniqueI[dict_deg .== 1]
+    @inbounds map(x->count_matrix[x,:] .= 0,nodeg)
+    @inbounds mult = @. log(normfreq / max_aa) * count_matrix
     mult = remove_nan.(mult,0)
-    cai_result = vec(exp.(sum(mult, dims = 1) ./ sum(count_matrix, dims = 1)))
+    @inbounds cai_result = vec(exp.(sum(mult, dims = 1) ./ sum(count_matrix, dims = 1)))
     return (CAI = cai_result, Identifier = names)
 end
 
@@ -258,26 +258,26 @@ end
 
 function fop(fasta_seq::String, ref_vector::Vector{Bool}, dict_uniqueI::Vector{Vector{Int32}}, dict_deg::Vector{Int32}, stop_mask::Vector{Bool}, aa_names::Vector{String}, rm_start::Bool, threshold::Integer)
     counts = count_codons(fasta_seq, rm_start, threshold)# Count codons in each gene 
-    count_matrix = counts[1]
-    names = counts[2] 
-    count_matrix = count_matrix[stop_mask,:] # Remove entries if removing stop codons
+    @inbounds count_matrix = @views counts[1]
+    @inbounds names = @views counts[2] 
+    @inbounds count_matrix = @views count_matrix[stop_mask,:] # Remove entries if removing stop codons
     seqs = @views size(count_matrix, 2) # Count how many genes we have
 
-    ref_seqs = (self = fill(true, seqs), reference = ref_vector[counts[3]])
+    @inbounds ref_seqs = (self = fill(true, seqs), reference = ref_vector[counts[3]])
     
     countAA = countsbyAA(count_matrix,dict_uniqueI) # This is the same for all measures
     normfreq = normFrequency(count_matrix, countAA, seqs, dict_uniqueI) 
-    normsetfreqs = map(x->normTotalFreq(count_matrix[:,x], countAA[:,x], dict_uniqueI), ref_seqs)
+    @inbounds normsetfreqs = @views map(x->normTotalFreq(count_matrix[:,x], countAA[:,x], dict_uniqueI), ref_seqs)
     max_aa = fill(0.0, length(aa_names))
     map(dict_uniqueI) do aa
-        max_aa[aa] .= maximum(normsetfreqs.reference[aa])
+        @inbounds max_aa[aa] .= maximum(normsetfreqs.reference[aa])
     end
-    max_aa[max_aa .== 0] .= 0.5
-    nodeg =  dict_uniqueI[dict_deg .== 1]
-    map(x->count_matrix[x,:] .= 0,nodeg)
-    ra = normfreq ./ max_aa
+    @inbounds max_aa[max_aa .== 0] .= 0.5
+    @inbounds nodeg =  dict_uniqueI[dict_deg .== 1]
+    @inbounds map(x->count_matrix[x,:] .= 0,nodeg)
+    @inbounds ra = normfreq ./ max_aa
     count2 = copy(count_matrix)
-    count2[ra .< 0.9] .= 0
+    @inbounds count2[ra .< 0.9] .= 0
     fops = vec(sum(count2, dims = 1) ./ sum(count_matrix, dims = 1))
     return (FOP = fops, Identifier = names)
 
@@ -363,16 +363,16 @@ end
 
 function gcb(fasta_seq::String, refs, dict_uniqueI, perc, stop_mask::Vector{Bool}, rm_start::Bool, threshold::Integer)
     counts = count_codons(fasta_seq, rm_start, threshold)# Count codons in each gene 
-    count_matrix = counts[1]
-    names = counts[2] 
-    count_matrix = count_matrix[stop_mask,:] # Remove entries if removing stop codons
+    @inbounds count_matrix = @iews counts[1]
+    @inbounds names = @views counts[2] 
+    @inbounds count_matrix = @views count_matrix[stop_mask,:] # Remove entries if removing stop codons
     seqs = @views size(count_matrix, 2) # Count how many genes we have
     lengths =  @views transpose(sum(count_matrix, dims = 1)) 
 
-    isempty(refs) ? (seed = fill(true, seqs)) : (seed = refs[counts[3]]) # Make our seed - this will be our initial reference set
+    @inbounds seed = isempty(refs) ? fill(true, seqs) : refs[counts[3]] # Make our seed - this will be our initial reference set
     countAA = countsbyAA(count_matrix,dict_uniqueI) # Count 
     normfreq = normFrequency(count_matrix, countAA, seqs, dict_uniqueI) 
-    normsetfreq = normTotalFreq(count_matrix[:,seed], countAA[:,seed], dict_uniqueI)
+    @inbounds normsetfreq = @views normTotalFreq(count_matrix[:,seed], countAA[:,seed], dict_uniqueI)
     
     gcb_prev = fill(0.0, seqs)
     iter = 0
@@ -380,19 +380,19 @@ function gcb(fasta_seq::String, refs, dict_uniqueI, perc, stop_mask::Vector{Bool
     diff = false
     # Now we'd enter the repeat loop
     while true
-        cb = log.(normsetfreq ./ nanmean(normfreq,2))
-        cb[normsetfreq .== 0] .= -5
-        gcb = vec(vec(sum(count_matrix .* cb, dims = 1)) ./ lengths)
+        @inbounds cb = log.(normsetfreq ./ nanmean(normfreq,2))
+        @inbounds cb[normsetfreq .== 0] .= -5
+        @inbounds gcb = vec(vec(sum(count_matrix .* cb, dims = 1)) ./ lengths)
         diff = all(gcb .== gcb_prev)
         if diff | iter > 6
            break
         end
         iter += 1
         gcb_prev = copy(gcb)
-        tops = sortperm(gcb, rev = true)[1:convert(Int,trunc(perc*seqs))]
+        @inbounds tops = sortperm(gcb, rev = true)[1:convert(Int,trunc(perc*seqs))]
         seed .= false
-        seed[tops] .= true
-        normsetfreq = normTotalFreq(count_matrix[:,seed], countAA[:,seed], dict_uniqueI)
+        @inbounds seed[tops] .= true
+        @inbounds normsetfreq = @views normTotalFreq(count_matrix[:,seed], countAA[:,seed], dict_uniqueI)
     end
     return (GCB = gcb, Identifier = names)
 end

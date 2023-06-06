@@ -1,10 +1,10 @@
 module CUBScout
 
-    using FASTX
-    using DelimitedFiles
-    using BioSequences
+    using FASTX: FASTAReader, sequence, identifier, description
+    using DelimitedFiles: readdlm
+    using BioSequences: BioSequences, LongDNA
     using Artifacts
-    using Statistics
+    using Statistics: mean
 
     export CodonDict, make_CodonDict, CodonDict_PATH, DEFAULT_CodonDict, ALTSTART_CodonDict, EXAMPLE_DATA_PATH, find_seqs, seq_names, seq_descriptions
     export b, enc, enc_p, mcb, milc, scuo, all_cub

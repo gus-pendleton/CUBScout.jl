@@ -66,9 +66,9 @@ end
 
 function countsbyAA(count_matrix, dict_uniqueI)
     aa_matrix = Matrix{Int64}(undef,length(dict_uniqueI),size(count_matrix,2))
-      @inbounds for (i,aa) in enumerate(dict_uniqueI)
+      for (i,aa) in enumerate(dict_uniqueI)
        for (j,col) in enumerate(eachcol(selectdim(count_matrix, 1, aa)))
-            aa_matrix[i,j] = sum(col)
+            @inbounds aa_matrix[i,j] = sum(col)
         end
     end
     return aa_matrix
@@ -78,7 +78,7 @@ end
 function normFrequency(count_matrix, AAcount_matrix, seq_length::Integer, dict_uniqueI)
     freq_matrix = zeros(Float64, size(count_matrix,1), seq_length)
     AAs = length(dict_uniqueI)
-     @inbounds for column in 1:seq_length
+     for column in 1:seq_length
         for row in 1:AAs
             @inbounds freq_matrix[dict_uniqueI[row],column] = @views count_matrix[dict_uniqueI[row],column] / AAcount_matrix[row,column]
         end
@@ -99,12 +99,12 @@ end
 function scuo_freq(count_matrix, AA_count_matrix, seq_length, dict_uniqueI)
     freq_matrix = zeros(Float64, size(AA_count_matrix,1), seq_length)
     AAs = length(dict_uniqueI)
-     @inbounds for column in 1:seq_length
+     for column in 1:seq_length
             for row in 1:AAs
-                freqs = count_matrix[dict_uniqueI[row],column] / AA_count_matrix[row, column]
-                vals = @. -freqs * log10(freqs) 
+                @inbounds freqs = count_matrix[dict_uniqueI[row],column] / AA_count_matrix[row, column]
+                @inbounds vals = @. -freqs * log10(freqs) 
                 vals = map((x) -> isnan(x) ? 0.0 : x, vals)
-                freq_matrix[row, column] = sum(vals)
+                @inbounds freq_matrix[row, column] = sum(vals)
 
             end
         end
@@ -114,7 +114,7 @@ end
 function correction_term(AAcount_matrix, length_vector, dict_deg)
     cor = Float64[]
     for (seq,len) in zip(eachcol(AAcount_matrix), length_vector)
-        push!(cor, (sum((seq .> 0) .* (dict_deg .- 1))/len) - 0.5)
+       @inbounds push!(cor, (sum((seq .> 0) .* (dict_deg .- 1))/len) - 0.5)
     end
     return cor
 end
@@ -134,11 +134,11 @@ end
 
 # Working on effNC
 function eFFNc(fa_matrix, dict_deg)
-    red = unique(dict_deg)[unique(dict_deg) .!= 1]
+    @inbounds red = unique(dict_deg)[unique(dict_deg) .!= 1]
     avgs = map(red) do x
         rows = findall(y-> x.==y, dict_deg)
-        avg = sum(fa_matrix[rows,:], dims = 1) ./ sum(fa_matrix[rows,:] .!= 0, dims = 1)
-        x == 3 || (avg[avg .== 0] .= (1/x))
+        @inbounds avg = sum(fa_matrix[rows,:], dims = 1) ./ sum(fa_matrix[rows,:] .!= 0, dims = 1)
+        @inbounds x == 3 || (avg[avg .== 0] .= (1/x))
         return length(rows) ./ avg
     end
     avgs = reduce(vcat, avgs)
@@ -147,10 +147,10 @@ function eFFNc(fa_matrix, dict_deg)
         twos = findfirst(x->x==2, red)
         fours = findfirst(x->x==4, red)
         cols = findall(x->x.==0, avgs[threes,:])
-        avgs[threes,cols] .= (avgs[twos,cols] / sum(dict_deg .== 2) + avgs[fours,cols] / sum(dict_deg .== 4)) / 2
+        @inbounds avgs[threes,cols] .= (avgs[twos,cols] / sum(dict_deg .== 2) + avgs[fours,cols] / sum(dict_deg .== 4)) / 2
     end
     enc = sum(dict_deg .== 1) .+ sum(avgs, dims = 1)
-    enc[enc .> 61] .= 61
+    @inbounds enc[enc .> 61] .= 61
 
     return enc
 end
@@ -174,7 +174,7 @@ function find_seqs(path::AbstractString, match_pattern::Regex)
     open(FASTAReader, path; copy=false) do reader
         match_vector = Bool[]
             for record in reader
-                push!(match_vector,occursin(match_pattern, description(record)))
+               @inbounds push!(match_vector,occursin(match_pattern, description(record)))
             end
         return match_vector
     end
@@ -196,7 +196,7 @@ function seq_names(path::AbstractString)
     open(FASTAReader, path; copy=false) do reader
         name_vector = String[]
             for record in reader
-                push!(name_vector, identifier(record))
+                @inbounds push!(name_vector, identifier(record))
             end
         return name_vector
     end
@@ -218,7 +218,7 @@ function seq_descriptions(path::AbstractString)
     open(FASTAReader, path; copy=false) do reader
         desc_vector = String[]
             for record in reader
-                push!(desc_vector, description(record))
+               @inbounds push!(desc_vector, description(record))
             end
         return desc_vector
     end
