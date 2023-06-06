@@ -50,32 +50,33 @@ julia> fieldnames(CodonDict)
 """
 function make_CodonDict(filepath::AbstractString, delimiter::AbstractChar = '\t')
     cod_mat = readdlm(filepath, delimiter)
-    alph_cod_mat = sortslices(cod_mat,dims=1,by=x->x[1],rev=false) # Alphabetize codons
-    uniqueAA = unique(alph_cod_mat[:,2]) # Find unique amino acid names
-    stop = map(x->occursin(r"Stop|stop|STOP|\*", x), alph_cod_mat[:,2]) # Search for stop codons
-    AA_nostops = alph_cod_mat[.!stop,2] # Filter out stops
+    alph_cod_mat = sortslices(cod_mat, dims = 1, by = x -> x[1], rev = false) # Alphabetize codons
+    uniqueAA = unique(alph_cod_mat[:, 2]) # Find unique amino acid names
+    stop = map(x -> occursin(r"Stop|stop|STOP|\*", x), alph_cod_mat[:, 2]) # Search for stop codons
+    AA_nostops = alph_cod_mat[.!stop, 2] # Filter out stops
     uniqueAA_nostops = unique(AA_nostops) # Filter out stops
-    indices = [findall(alph_cod_mat[:,2] .== aa) for aa in uniqueAA] # Find codon indices for each 
+    indices = [findall(alph_cod_mat[:, 2] .== aa) for aa in uniqueAA] # Find codon indices for each 
     indices_nostops = [findall(AA_nostops .== aa) for aa in uniqueAA_nostops]
     CodonDict(
-        LongDNA{2}.(alph_cod_mat[:,1]), 
-        alph_cod_mat[:,2], 
+        LongDNA{2}.(alph_cod_mat[:, 1]),
+        alph_cod_mat[:, 2],
         AA_nostops,
-        uniqueAA, 
+        uniqueAA,
         uniqueAA_nostops,
-        indices, 
+        indices,
         indices_nostops,
         length.(indices),
         length.(indices_nostops),
-        .!stop
-        )
+        .!stop,
+    )
 end
 
 const CodonDict_PATH = joinpath(artifact"codon_dict", "codon_dict.txt")
 
 const DEFAULT_CodonDict = make_CodonDict(CodonDict_PATH)
 
-const ALTSTART_CodonDict = make_CodonDict(joinpath(artifact"codon_dict_altstart", "codon_dict_altstart.txt"))
+const ALTSTART_CodonDict =
+    make_CodonDict(joinpath(artifact"codon_dict_altstart", "codon_dict_altstart.txt"))
 
 """
     EXAMPLE_DATA_PATH

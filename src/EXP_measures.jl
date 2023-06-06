@@ -32,15 +32,43 @@ julia> melp(EXAMPLE_DATA_PATH, ribosomal_genes, ALTSTART_CodonDict); # Code TTG 
 julia> melp(EXAMPLE_DATA_PATH, ribosomal_genes, rm_start = true); # Remove start codons
 ```
 """
-function melp(filepath::String, ref_vector::Vector{Bool}, dict::CodonDict = DEFAULT_CodonDict; rm_start = false, rm_stop = false, threshold = 80)
-    milcs = milc(filepath, dict, ref_seqs = (self = fill(true, length(ref_vector)), reference = ref_vector), rm_start = rm_start, rm_stop = rm_stop, threshold = threshold)
+function melp(
+    filepath::String,
+    ref_vector::Vector{Bool},
+    dict::CodonDict = DEFAULT_CodonDict;
+    rm_start = false,
+    rm_stop = false,
+    threshold = 80,
+)
+    milcs = milc(
+        filepath,
+        dict,
+        ref_seqs = (self = fill(true, length(ref_vector)), reference = ref_vector),
+        rm_start = rm_start,
+        rm_stop = rm_stop,
+        threshold = threshold,
+    )
     return (MELP = milcs.self ./ milcs.reference, Identifier = milcs.Identifier)
 end
 
-function melp(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::CodonDict = DEFAULT_CodonDict; rm_start = false, rm_stop = false, threshold = 80)
-    ref_tuples = map(x->(self = fill(true, length(x)), reference = x), ref_vectors)
-    milcs = milc(filepaths, dict, ref_seqs = ref_tuples, rm_start = rm_start, rm_stop = rm_stop, threshold = threshold)
-    return map(x->(MELP = x.self ./ x.reference, x.Identifier), milcs)
+function melp(
+    filepaths::Vector{String},
+    ref_vectors::Vector{Vector{Bool}},
+    dict::CodonDict = DEFAULT_CodonDict;
+    rm_start = false,
+    rm_stop = false,
+    threshold = 80,
+)
+    ref_tuples = map(x -> (self = fill(true, length(x)), reference = x), ref_vectors)
+    milcs = milc(
+        filepaths,
+        dict,
+        ref_seqs = ref_tuples,
+        rm_start = rm_start,
+        rm_stop = rm_stop,
+        threshold = threshold,
+    )
+    return map(x -> (MELP = x.self ./ x.reference, x.Identifier), milcs)
 end
 
 """
@@ -76,17 +104,45 @@ julia> e(EXAMPLE_DATA_PATH, ribosomal_genes, ALTSTART_CodonDict); # Code TTG and
 julia> e(EXAMPLE_DATA_PATH, ribosomal_genes, rm_start = true); # Remove start codons
 ```
 """
-function e(filepath::String, ref_vector::Vector{Bool}, dict::CodonDict = DEFAULT_CodonDict; rm_start = false, rm_stop = false, threshold = 80)
-    bs = b(filepath, dict, ref_seqs = (self = fill(true, length(ref_vector)), reference = ref_vector), rm_start = rm_start, rm_stop = rm_stop, threshold = threshold)
-    
+function e(
+    filepath::String,
+    ref_vector::Vector{Bool},
+    dict::CodonDict = DEFAULT_CodonDict;
+    rm_start = false,
+    rm_stop = false,
+    threshold = 80,
+)
+    bs = b(
+        filepath,
+        dict,
+        ref_seqs = (self = fill(true, length(ref_vector)), reference = ref_vector),
+        rm_start = rm_start,
+        rm_stop = rm_stop,
+        threshold = threshold,
+    )
+
     return (E = bs.self ./ bs.reference, Identifier = bs.Identifier)
 end
 
-function e(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::CodonDict = DEFAULT_CodonDict; rm_start = false, rm_stop = false, threshold = 80)
-    ref_tuples = map(x->(self = fill(true, length(x)), reference = x), ref_vectors)
-    bs = b(filepaths, dict, ref_seqs = ref_tuples, rm_start = rm_start, rm_stop = rm_stop, threshold = threshold)
+function e(
+    filepaths::Vector{String},
+    ref_vectors::Vector{Vector{Bool}},
+    dict::CodonDict = DEFAULT_CodonDict;
+    rm_start = false,
+    rm_stop = false,
+    threshold = 80,
+)
+    ref_tuples = map(x -> (self = fill(true, length(x)), reference = x), ref_vectors)
+    bs = b(
+        filepaths,
+        dict,
+        ref_seqs = ref_tuples,
+        rm_start = rm_start,
+        rm_stop = rm_stop,
+        threshold = threshold,
+    )
 
-    return map(x->(E = x.self ./ x.reference, Identifer = x.Identifier), bs)
+    return map(x -> (E = x.self ./ x.reference, Identifer = x.Identifier), bs)
 end
 
 """
@@ -122,7 +178,14 @@ julia> cai(EXAMPLE_DATA_PATH, ribosomal_genes, ALTSTART_CodonDict); # Code TTG a
 julia> cai(EXAMPLE_DATA_PATH, ribosomal_genes, rm_start = true); # Remove start codons
 ```
 """
-function cai(filepath::String, ref_vector::Vector{Bool}, dict::CodonDict = DEFAULT_CodonDict; rm_start = false, rm_stop = false, threshold = 80)
+function cai(
+    filepath::String,
+    ref_vector::Vector{Bool},
+    dict::CodonDict = DEFAULT_CodonDict;
+    rm_start = false,
+    rm_stop = false,
+    threshold = 80,
+)
     if rm_stop
         uniqueI = dict.uniqueI_nostops
         deg = dict.deg_nostops
@@ -131,13 +194,20 @@ function cai(filepath::String, ref_vector::Vector{Bool}, dict::CodonDict = DEFAU
     else
         uniqueI = dict.uniqueI
         deg = dict.deg
-        stop_mask = fill(true,64)
+        stop_mask = fill(true, 64)
         aa_names = dict.AA
     end
     return cai(filepath, ref_vector, uniqueI, deg, stop_mask, aa_names, rm_start, threshold)
 end
 
-function cai(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::CodonDict = DEFAULT_CodonDict; rm_start = false, rm_stop = false, threshold = 80)
+function cai(
+    filepaths::Vector{String},
+    ref_vectors::Vector{Vector{Bool}},
+    dict::CodonDict = DEFAULT_CodonDict;
+    rm_start = false,
+    rm_stop = false,
+    threshold = 80,
+)
     len = length(filepaths)
     results = Vector{Any}(undef, len)
     if rm_stop
@@ -148,38 +218,59 @@ function cai(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict:
     else
         uniqueI = dict.uniqueI
         deg = dict.deg
-        stop_mask = fill(true,64)
+        stop_mask = fill(true, 64)
         aa_names = dict.AA
     end
 
-    Threads.@threads for i in 1:len
-                @inbounds results[i] = cai(filepaths[i], ref_vectors[i], uniqueI, deg, stop_mask, aa_names, rm_start, threshold)
+    Threads.@threads for i = 1:len
+        @inbounds results[i] = cai(
+            filepaths[i],
+            ref_vectors[i],
+            uniqueI,
+            deg,
+            stop_mask,
+            aa_names,
+            rm_start,
+            threshold,
+        )
     end
     return results
 end
 
 
-function cai(fasta_seq::String, ref_vector::Vector{Bool}, dict_uniqueI::Vector{Vector{Int32}}, dict_deg::Vector{Int32}, stop_mask::Vector{Bool}, aa_names::Vector{String}, rm_start::Bool, threshold::Integer)
+function cai(
+    fasta_seq::String,
+    ref_vector::Vector{Bool},
+    dict_uniqueI::Vector{Vector{Int32}},
+    dict_deg::Vector{Int32},
+    stop_mask::Vector{Bool},
+    aa_names::Vector{String},
+    rm_start::Bool,
+    threshold::Integer,
+)
     counts = count_codons(fasta_seq, rm_start, threshold)# Count codons in each gene 
     @inbounds count_matrix = @views counts[1]
-    @inbounds names = @views counts[2] 
-    @inbounds count_matrix = @views count_matrix[stop_mask,:] # Remove entries if removing stop codons
+    @inbounds names = @views counts[2]
+    @inbounds count_matrix = @views count_matrix[stop_mask, :] # Remove entries if removing stop codons
     seqs = @views size(count_matrix, 2) # Count how many genes we have
 
     @inbounds ref_seqs = (self = fill(true, seqs), reference = ref_vector[counts[3]])
-    
-    countAA = countsbyAA(count_matrix,dict_uniqueI) # This is the same for all measures
-    normfreq = normFrequency(count_matrix, countAA, seqs, dict_uniqueI) 
-    @inbounds normsetfreqs = @views map(x->normTotalFreq(count_matrix[:,x], countAA[:,x], dict_uniqueI), ref_seqs)
+
+    countAA = countsbyAA(count_matrix, dict_uniqueI) # This is the same for all measures
+    normfreq = normFrequency(count_matrix, countAA, seqs, dict_uniqueI)
+    @inbounds normsetfreqs = @views map(
+        x -> normTotalFreq(count_matrix[:, x], countAA[:, x], dict_uniqueI),
+        ref_seqs,
+    )
     max_aa = fill(0.0, length(aa_names))
     map(dict_uniqueI) do aa
         @inbounds max_aa[aa] .= maximum(normsetfreqs.reference[aa])
     end
-    @inbounds max_aa[max_aa .== 0] .= 0.5
-    @inbounds nodeg =  dict_uniqueI[dict_deg .== 1]
-    @inbounds map(x->count_matrix[x,:] .= 0,nodeg)
+    @inbounds max_aa[max_aa.==0] .= 0.5
+    @inbounds nodeg = dict_uniqueI[dict_deg.==1]
+    @inbounds map(x -> count_matrix[x, :] .= 0, nodeg)
     @inbounds mult = @. log(normfreq / max_aa) * count_matrix
-    mult = remove_nan.(mult,0)
+    mult = remove_nan.(mult, 0)
     @inbounds cai_result = vec(exp.(sum(mult, dims = 1) ./ sum(count_matrix, dims = 1)))
     return (CAI = cai_result, Identifier = names)
 end
@@ -218,7 +309,14 @@ julia> fop(EXAMPLE_DATA_PATH, ribosomal_genes, ALTSTART_CodonDict); # Code TTG a
 julia> fop(EXAMPLE_DATA_PATH, ribosomal_genes, rm_start = true); # Remove start codons
 ```
 """
-function fop(filepath::String, ref_vector::Vector{Bool}, dict::CodonDict = DEFAULT_CodonDict; rm_start = false, rm_stop = false, threshold = 80)
+function fop(
+    filepath::String,
+    ref_vector::Vector{Bool},
+    dict::CodonDict = DEFAULT_CodonDict;
+    rm_start = false,
+    rm_stop = false,
+    threshold = 80,
+)
     if rm_stop
         uniqueI = dict.uniqueI_nostops
         deg = dict.deg_nostops
@@ -227,13 +325,20 @@ function fop(filepath::String, ref_vector::Vector{Bool}, dict::CodonDict = DEFAU
     else
         uniqueI = dict.uniqueI
         deg = dict.deg
-        stop_mask = fill(true,64)
+        stop_mask = fill(true, 64)
         aa_names = dict.AA
     end
     return fop(filepath, ref_vector, uniqueI, deg, stop_mask, aa_names, rm_start, threshold)
 end
 
-function fop(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict::CodonDict = DEFAULT_CodonDict; rm_start = false, rm_stop = false, threshold = 80)
+function fop(
+    filepaths::Vector{String},
+    ref_vectors::Vector{Vector{Bool}},
+    dict::CodonDict = DEFAULT_CodonDict;
+    rm_start = false,
+    rm_stop = false,
+    threshold = 80,
+)
     len = length(filepaths)
     results = Vector{Any}(undef, len)
     if rm_stop
@@ -244,40 +349,61 @@ function fop(filepaths::Vector{String}, ref_vectors::Vector{Vector{Bool}}, dict:
     else
         uniqueI = dict.uniqueI
         deg = dict.deg
-        stop_mask = fill(true,64)
+        stop_mask = fill(true, 64)
         aa_names = dict.AA
     end
-  
-    Threads.@threads for i in 1:len
-                @inbounds results[i] = fop(filepaths[i], ref_vectors[i], uniqueI, deg, stop_mask, aa_names, rm_start, threshold)
-             
+
+    Threads.@threads for i = 1:len
+        @inbounds results[i] = fop(
+            filepaths[i],
+            ref_vectors[i],
+            uniqueI,
+            deg,
+            stop_mask,
+            aa_names,
+            rm_start,
+            threshold,
+        )
+
     end
     return results
 end
 
 
-function fop(fasta_seq::String, ref_vector::Vector{Bool}, dict_uniqueI::Vector{Vector{Int32}}, dict_deg::Vector{Int32}, stop_mask::Vector{Bool}, aa_names::Vector{String}, rm_start::Bool, threshold::Integer)
+function fop(
+    fasta_seq::String,
+    ref_vector::Vector{Bool},
+    dict_uniqueI::Vector{Vector{Int32}},
+    dict_deg::Vector{Int32},
+    stop_mask::Vector{Bool},
+    aa_names::Vector{String},
+    rm_start::Bool,
+    threshold::Integer,
+)
     counts = count_codons(fasta_seq, rm_start, threshold)# Count codons in each gene 
     @inbounds count_matrix = @views counts[1]
-    @inbounds names = @views counts[2] 
-    @inbounds count_matrix = @views count_matrix[stop_mask,:] # Remove entries if removing stop codons
+    @inbounds names = @views counts[2]
+    @inbounds count_matrix = @views count_matrix[stop_mask, :] # Remove entries if removing stop codons
     seqs = @views size(count_matrix, 2) # Count how many genes we have
 
     @inbounds ref_seqs = (self = fill(true, seqs), reference = ref_vector[counts[3]])
-    
-    countAA = countsbyAA(count_matrix,dict_uniqueI) # This is the same for all measures
-    normfreq = normFrequency(count_matrix, countAA, seqs, dict_uniqueI) 
-    @inbounds normsetfreqs = @views map(x->normTotalFreq(count_matrix[:,x], countAA[:,x], dict_uniqueI), ref_seqs)
+
+    countAA = countsbyAA(count_matrix, dict_uniqueI) # This is the same for all measures
+    normfreq = normFrequency(count_matrix, countAA, seqs, dict_uniqueI)
+    @inbounds normsetfreqs = @views map(
+        x -> normTotalFreq(count_matrix[:, x], countAA[:, x], dict_uniqueI),
+        ref_seqs,
+    )
     max_aa = fill(0.0, length(aa_names))
     map(dict_uniqueI) do aa
         @inbounds max_aa[aa] .= maximum(normsetfreqs.reference[aa])
     end
-    @inbounds max_aa[max_aa .== 0] .= 0.5
-    @inbounds nodeg =  dict_uniqueI[dict_deg .== 1]
-    @inbounds map(x->count_matrix[x,:] .= 0,nodeg)
+    @inbounds max_aa[max_aa.==0] .= 0.5
+    @inbounds nodeg = dict_uniqueI[dict_deg.==1]
+    @inbounds map(x -> count_matrix[x, :] .= 0, nodeg)
     @inbounds ra = normfreq ./ max_aa
     count2 = copy(count_matrix)
-    @inbounds count2[ra .< 0.9] .= 0
+    @inbounds count2[ra.<0.9] .= 0
     fops = vec(sum(count2, dims = 1) ./ sum(count_matrix, dims = 1))
     return (FOP = fops, Identifier = names)
 
@@ -327,18 +453,34 @@ julia> gcb(EXAMPLE_DATA_PATH, ALTSTART_CodonDict); # Code TTG and CTG as methion
 julia> gcb(EXAMPLE_DATA_PATH, rm_start = true); # Remove start codons
 ```
 """
-function gcb(filepath::String, dict::CodonDict = DEFAULT_CodonDict; ref_vector = [], perc = 0.05, rm_start = false, rm_stop = false, threshold = 80)
+function gcb(
+    filepath::String,
+    dict::CodonDict = DEFAULT_CodonDict;
+    ref_vector = [],
+    perc = 0.05,
+    rm_start = false,
+    rm_stop = false,
+    threshold = 80,
+)
     if rm_stop
         uniqueI = dict.uniqueI_nostops
         stop_mask = dict.stop_mask
     else
         uniqueI = dict.uniqueI
-        stop_mask = fill(true,64)
+        stop_mask = fill(true, 64)
     end
     return gcb(filepath, ref_vector, uniqueI, perc, stop_mask, rm_start, threshold)
 end
 
-function gcb(filepaths::Vector{String}, dict::CodonDict = DEFAULT_CodonDict; ref_vectors = [], perc = 0.05, rm_start = false, rm_stop = false, threshold = 80)
+function gcb(
+    filepaths::Vector{String},
+    dict::CodonDict = DEFAULT_CodonDict;
+    ref_vectors = [],
+    perc = 0.05,
+    rm_start = false,
+    rm_stop = false,
+    threshold = 80,
+)
     len = length(filepaths)
     results = Vector{Any}(undef, len)
     if rm_stop
@@ -346,54 +488,79 @@ function gcb(filepaths::Vector{String}, dict::CodonDict = DEFAULT_CodonDict; ref
         stop_mask = dict.stop_mask
     else
         uniqueI = dict.uniqueI
-        stop_mask = fill(true,64)
+        stop_mask = fill(true, 64)
     end
     if isempty(ref_vectors)
-        Threads.@threads for i in 1:len
-           @inbounds results[i] = gcb(filepaths[i], ref_vectors, uniqueI, perc, stop_mask, rm_start, threshold)
-            end
+        Threads.@threads for i = 1:len
+            @inbounds results[i] = gcb(
+                filepaths[i],
+                ref_vectors,
+                uniqueI,
+                perc,
+                stop_mask,
+                rm_start,
+                threshold,
+            )
+        end
     else
-            Threads.@threads for i in 1:len
-                @inbounds results[i] = gcb(filepaths[i], ref_vectors[i], uniqueI, perc, stop_mask, rm_start, threshold)
-             end
+        Threads.@threads for i = 1:len
+            @inbounds results[i] = gcb(
+                filepaths[i],
+                ref_vectors[i],
+                uniqueI,
+                perc,
+                stop_mask,
+                rm_start,
+                threshold,
+            )
+        end
     end
     return results
 end
 
 
-function gcb(fasta_seq::String, refs, dict_uniqueI, perc, stop_mask::Vector{Bool}, rm_start::Bool, threshold::Integer)
+function gcb(
+    fasta_seq::String,
+    refs,
+    dict_uniqueI,
+    perc,
+    stop_mask::Vector{Bool},
+    rm_start::Bool,
+    threshold::Integer,
+)
     counts = count_codons(fasta_seq, rm_start, threshold)# Count codons in each gene 
     @inbounds count_matrix = @iews counts[1]
-    @inbounds names = @views counts[2] 
-    @inbounds count_matrix = @views count_matrix[stop_mask,:] # Remove entries if removing stop codons
+    @inbounds names = @views counts[2]
+    @inbounds count_matrix = @views count_matrix[stop_mask, :] # Remove entries if removing stop codons
     seqs = @views size(count_matrix, 2) # Count how many genes we have
-    lengths =  @views transpose(sum(count_matrix, dims = 1)) 
+    lengths = @views transpose(sum(count_matrix, dims = 1))
 
     @inbounds seed = isempty(refs) ? fill(true, seqs) : refs[counts[3]] # Make our seed - this will be our initial reference set
-    countAA = countsbyAA(count_matrix,dict_uniqueI) # Count 
-    normfreq = normFrequency(count_matrix, countAA, seqs, dict_uniqueI) 
-    @inbounds normsetfreq = @views normTotalFreq(count_matrix[:,seed], countAA[:,seed], dict_uniqueI)
-    
+    countAA = countsbyAA(count_matrix, dict_uniqueI) # Count 
+    normfreq = normFrequency(count_matrix, countAA, seqs, dict_uniqueI)
+    @inbounds normsetfreq =
+        @views normTotalFreq(count_matrix[:, seed], countAA[:, seed], dict_uniqueI)
+
     gcb_prev = fill(0.0, seqs)
     iter = 0
     gcb = []
     diff = false
     # Now we'd enter the repeat loop
     while true
-        @inbounds cb = log.(normsetfreq ./ nanmean(normfreq,2))
-        @inbounds cb[normsetfreq .== 0] .= -5
+        @inbounds cb = log.(normsetfreq ./ nanmean(normfreq, 2))
+        @inbounds cb[normsetfreq.==0] .= -5
         @inbounds gcb = vec(vec(sum(count_matrix .* cb, dims = 1)) ./ lengths)
         diff = all(gcb .== gcb_prev)
         if diff | iter > 6
-           break
+            break
         end
         iter += 1
         gcb_prev = copy(gcb)
-        @inbounds tops = sortperm(gcb, rev = true)[1:convert(Int,trunc(perc*seqs))]
+        @inbounds tops = sortperm(gcb, rev = true)[1:convert(Int, trunc(perc * seqs))]
         seed .= false
         @inbounds seed[tops] .= true
-        @inbounds normsetfreq = @views normTotalFreq(count_matrix[:,seed], countAA[:,seed], dict_uniqueI)
+        @inbounds normsetfreq =
+            @views normTotalFreq(count_matrix[:, seed], countAA[:, seed], dict_uniqueI)
     end
     return (GCB = gcb, Identifier = names)
 end
-

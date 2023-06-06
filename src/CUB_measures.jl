@@ -46,19 +46,33 @@ julia> b(EXAMPLE_DATA_PATH, ref_seqs = (ribosomal = ribosomal_genes,)); # Calcul
 julia> b(EXAMPLE_DATA_PATH, ref_seqs = (self = all_genes, ribosomal = ribosomal_genes,)); # Calculate using all genes and ribosomal genes as a reference subset
 ```
 """
-function b(filepath::String, dict::CodonDict = DEFAULT_CodonDict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80)
+function b(
+    filepath::String,
+    dict::CodonDict = DEFAULT_CodonDict;
+    ref_seqs = (),
+    rm_start = false,
+    rm_stop = false,
+    threshold = 80,
+)
     if rm_stop
         uniqueI = dict.uniqueI_nostops
         stop_mask = dict.stop_mask
     else
         uniqueI = dict.uniqueI
-        stop_mask = fill(true,64)
+        stop_mask = fill(true, 64)
     end
 
     return b(filepath, ref_seqs, uniqueI, stop_mask, rm_start, threshold)
 end
 
-function b(filepaths::Vector{String}, dict::CodonDict = DEFAULT_CodonDict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80)
+function b(
+    filepaths::Vector{String},
+    dict::CodonDict = DEFAULT_CodonDict;
+    ref_seqs = (),
+    rm_start = false,
+    rm_stop = false,
+    threshold = 80,
+)
     len = length(filepaths)
     results = Vector{Any}(undef, len)
     if rm_stop
@@ -66,51 +80,63 @@ function b(filepaths::Vector{String}, dict::CodonDict = DEFAULT_CodonDict; ref_s
         stop_mask = dict.stop_mask
     else
         uniqueI = dict.uniqueI
-        stop_mask = fill(true,64)
+        stop_mask = fill(true, 64)
     end
     if isempty(ref_seqs)
-        Threads.@threads for i in 1:len
-           @inbounds results[i] = b(filepaths[i], ref_seqs, uniqueI, stop_mask, rm_start, threshold)
-            end
+        Threads.@threads for i = 1:len
+            @inbounds results[i] =
+                b(filepaths[i], ref_seqs, uniqueI, stop_mask, rm_start, threshold)
+        end
     else
-            Threads.@threads for i in 1:len
-                @inbounds results[i] = b(filepaths[i], ref_seqs[i], uniqueI, stop_mask, rm_start, threshold)
-             end
+        Threads.@threads for i = 1:len
+            @inbounds results[i] =
+                b(filepaths[i], ref_seqs[i], uniqueI, stop_mask, rm_start, threshold)
+        end
     end
     return results
 end
 
-function b(fasta_seq::String, ref_seqs, dict_uniqueI::Vector{Vector{Int32}}, stop_mask::Vector{Bool}, rm_start::Bool, threshold::Integer)
+function b(
+    fasta_seq::String,
+    ref_seqs,
+    dict_uniqueI::Vector{Vector{Int32}},
+    stop_mask::Vector{Bool},
+    rm_start::Bool,
+    threshold::Integer,
+)
     counts = count_codons(fasta_seq, rm_start, threshold) # Count codons in each gene 
     @inbounds count_matrix = @views counts[1] # Count matrix 64 (codons) x n sequences
     @inbounds names = @views counts[2] # Names of each fasta sequence
-    @inbounds count_matrix = @views count_matrix[stop_mask,:] # Remove entries if removing stop codons
-    lengths =  @views transpose(sum(count_matrix, dims = 1)) # Find lengths of each gene (in codons)
+    @inbounds count_matrix = @views count_matrix[stop_mask, :] # Remove entries if removing stop codons
+    lengths = @views transpose(sum(count_matrix, dims = 1)) # Find lengths of each gene (in codons)
     seqs = @views size(count_matrix, 2) # Count how many genes we have
     if isempty(ref_seqs) # If no ref_seqs provided, create a "self" tuple
-        (ref_seqs = (self = fill(true, seqs),)) 
+        (ref_seqs = (self = fill(true, seqs),))
     else
-    @inbounds ref_seqs = @views map(x->x[counts[3]], ref_seqs)
+        @inbounds ref_seqs = @views map(x -> x[counts[3]], ref_seqs)
     end
-    countAA = countsbyAA(count_matrix,dict_uniqueI) # Sum total codons for each amino acid for each sequence
-    @inbounds pa = @views map(x-> x ./ lengths, eachrow(countAA)) # Find frequency of AA in each gene
+    countAA = countsbyAA(count_matrix, dict_uniqueI) # Sum total codons for each amino acid for each sequence
+    @inbounds pa = @views map(x -> x ./ lengths, eachrow(countAA)) # Find frequency of AA in each gene
     pa = transpose(reduce(hcat, pa))
     normfreq = normFrequency(count_matrix, countAA, seqs, dict_uniqueI) # Calculate frequency of each codon for each amino acid in each sequence
-    @inbounds normsetfreqs = @views map(x->normTotalFreq(count_matrix[:,x], countAA[:,x], dict_uniqueI), ref_seqs) # Calculate frequency of each codon for each amino acid in reference subset
-    @inbounds dts = @views map(x->abs.((normfreq .- x)), normsetfreqs) # Subtract the reference frequency of codon from the frequency of that codon within each gene
+    @inbounds normsetfreqs = @views map(
+        x -> normTotalFreq(count_matrix[:, x], countAA[:, x], dict_uniqueI),
+        ref_seqs,
+    ) # Calculate frequency of each codon for each amino acid in reference subset
+    @inbounds dts = @views map(x -> abs.((normfreq .- x)), normsetfreqs) # Subtract the reference frequency of codon from the frequency of that codon within each gene
     dts = map(dts) do y
         map((x) -> remove_nan(x, 0.0), y) # Replace nans with 0s (will be summed later)
     end
     bas = map(dts) do dt
         ba = Array{Float64}(undef, size(countAA, 1), size(countAA, 2))
-        for (i,aa) in enumerate(dict_uniqueI)
-            @inbounds row = @views sum(dt[aa,:],dims = 1) # Sum up contribution of dt for each amino acid
-            @inbounds ba[i,:] = row
+        for (i, aa) in enumerate(dict_uniqueI)
+            @inbounds row = @views sum(dt[aa, :], dims = 1) # Sum up contribution of dt for each amino acid
+            @inbounds ba[i, :] = row
         end
         ba
     end
     bs = map(bas) do ba
-         @inbounds vec(sum(ba .* pa, dims = 1)) # Multiply ba by pa and sum for each gene sequence
+        @inbounds vec(sum(ba .* pa, dims = 1)) # Multiply ba by pa and sum for each gene sequence
     end
     return (bs..., Identifier = names)
 end
@@ -154,7 +180,13 @@ julia> enc(EXAMPLE_DATA_PATH, ALSTART_CodonDict); # Code TTG and CTG as methioni
 julia> enc(EXAMPLE_DATA_PATH, rm_start = true); # Remove start codons
 ```
 """
-function enc(filepath::String, dict::CodonDict = DEFAULT_CodonDict; rm_start = false, rm_stop = false, threshold = 80)
+function enc(
+    filepath::String,
+    dict::CodonDict = DEFAULT_CodonDict;
+    rm_start = false,
+    rm_stop = false,
+    threshold = 80,
+)
     if rm_stop
         uniqueI = dict.uniqueI_nostops
         deg = dict.deg_nostops
@@ -162,12 +194,18 @@ function enc(filepath::String, dict::CodonDict = DEFAULT_CodonDict; rm_start = f
     else
         uniqueI = dict.uniqueI
         deg = dict.deg
-        stop_mask = fill(true,64)
+        stop_mask = fill(true, 64)
     end
     return enc(filepath, uniqueI, deg, stop_mask, rm_start, threshold)
 end
 
-function enc(filepaths::Vector{String}, dict::CodonDict = DEFAULT_CodonDict; rm_start = false, rm_stop = false, threshold = 80)
+function enc(
+    filepaths::Vector{String},
+    dict::CodonDict = DEFAULT_CodonDict;
+    rm_start = false,
+    rm_stop = false,
+    threshold = 80,
+)
     len = length(filepaths)
     results = Vector{Any}(undef, len)
     if rm_stop
@@ -177,24 +215,32 @@ function enc(filepaths::Vector{String}, dict::CodonDict = DEFAULT_CodonDict; rm_
     else
         uniqueI = dict.uniqueI
         deg = dict.deg
-        stop_mask = fill(true,64)
+        stop_mask = fill(true, 64)
     end
-    Threads.@threads for i in 1:len
-       @inbounds results[i] = enc(filepaths[i], uniqueI, deg, stop_mask, rm_start, threshold)
+    Threads.@threads for i = 1:len
+        @inbounds results[i] =
+            enc(filepaths[i], uniqueI, deg, stop_mask, rm_start, threshold)
     end
-    
+
     return results
 end
 
-function enc(fasta_seq::String, dict_uniqueI::Vector{Vector{Int32}}, dict_deg::Vector{Int32}, stop_mask::Vector{Bool}, rm_start::Bool, threshold::Integer)
+function enc(
+    fasta_seq::String,
+    dict_uniqueI::Vector{Vector{Int32}},
+    dict_deg::Vector{Int32},
+    stop_mask::Vector{Bool},
+    rm_start::Bool,
+    threshold::Integer,
+)
     counts = count_codons(fasta_seq, rm_start, threshold) # Count codons in each gene 
     @inbounds count_matrix = @views counts[1] # This returns the codon count matrix
     @inbounds names = @views counts[2] # This is the names for each sequence in the file
-    @inbounds count_matrix = @views count_matrix[stop_mask,:] # Remove entries if removing stop codons
+    @inbounds count_matrix = @views count_matrix[stop_mask, :] # Remove entries if removing stop codons
     seqs = @views size(count_matrix, 2) # Count how many genes we have
-    countAA = countsbyAA(count_matrix,dict_uniqueI) # Sum total codons for each amino acid for each sequence 
-    pi_vec =  enc_pi(count_matrix, countAA, seqs, dict_uniqueI) # Calculate pi statistic for each gene
-    @inbounds fa =  @views @. (countAA * pi_vec - 1) / (countAA - 1) # Calculate Fa
+    countAA = countsbyAA(count_matrix, dict_uniqueI) # Sum total codons for each amino acid for each sequence 
+    pi_vec = enc_pi(count_matrix, countAA, seqs, dict_uniqueI) # Calculate pi statistic for each gene
+    @inbounds fa = @views @. (countAA * pi_vec - 1) / (countAA - 1) # Calculate Fa
     fa[isnan.(fa)] .= 0.0 # Replace NaN with 0.0 (okay because will sum next)
     res = vec(eFFNc(fa, dict_deg)) # Calculate Nc for each gene
     return (ENC = res, Identifier = names)
@@ -248,7 +294,14 @@ julia> enc_p(EXAMPLE_DATA_PATH, ref_seqs = (ribosomal = ribosomal_genes,)); # Ca
 julia> enc_p(EXAMPLE_DATA_PATH, ref_seqs = (self = all_genes, ribosomal = ribosomal_genes,)); # Calculate using all genes and ribosomal genes as a reference subset
 ```
 """
-function enc_p(filepath::String, dict::CodonDict = DEFAULT_CodonDict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80)
+function enc_p(
+    filepath::String,
+    dict::CodonDict = DEFAULT_CodonDict;
+    ref_seqs = (),
+    rm_start = false,
+    rm_stop = false,
+    threshold = 80,
+)
     if rm_stop
         uniqueI = dict.uniqueI_nostops
         deg = dict.deg_nostops
@@ -256,12 +309,19 @@ function enc_p(filepath::String, dict::CodonDict = DEFAULT_CodonDict; ref_seqs =
     else
         uniqueI = dict.uniqueI
         deg = dict.deg
-        stop_mask = fill(true,64)
+        stop_mask = fill(true, 64)
     end
     return enc_p(filepath, ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold)
 end
 
-function enc_p(filepaths::Vector{String}, dict::CodonDict = DEFAULT_CodonDict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80)
+function enc_p(
+    filepaths::Vector{String},
+    dict::CodonDict = DEFAULT_CodonDict;
+    ref_seqs = (),
+    rm_start = false,
+    rm_stop = false,
+    threshold = 80,
+)
     len = length(filepaths)
     results = Vector{Any}(undef, len)
     if rm_stop
@@ -271,55 +331,75 @@ function enc_p(filepaths::Vector{String}, dict::CodonDict = DEFAULT_CodonDict; r
     else
         uniqueI = dict.uniqueI
         deg = dict.deg
-        stop_mask = fill(true,64)
+        stop_mask = fill(true, 64)
     end
     if isempty(ref_seqs)
-        Threads.@threads for i in 1:len
-           @inbounds results[i] = enc_p(filepaths[i], ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold)
-            end
+        Threads.@threads for i = 1:len
+            @inbounds results[i] =
+                enc_p(filepaths[i], ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold)
+        end
     else
-            Threads.@threads for i in 1:len
-                @inbounds results[i] = enc_p(filepaths[i], ref_seqs[i], uniqueI, deg, stop_mask, rm_start, threshold)
-             end
+        Threads.@threads for i = 1:len
+            @inbounds results[i] = enc_p(
+                filepaths[i],
+                ref_seqs[i],
+                uniqueI,
+                deg,
+                stop_mask,
+                rm_start,
+                threshold,
+            )
+        end
     end
-    
+
     return results
 end
 
 
-function enc_p(fasta_seq::String, ref_seqs, dict_uniqueI::Vector{Vector{Int32}}, dict_deg::Vector{Int32}, stop_mask::Vector{Bool}, rm_start::Bool, threshold::Integer)
+function enc_p(
+    fasta_seq::String,
+    ref_seqs,
+    dict_uniqueI::Vector{Vector{Int32}},
+    dict_deg::Vector{Int32},
+    stop_mask::Vector{Bool},
+    rm_start::Bool,
+    threshold::Integer,
+)
     counts = count_codons(fasta_seq, rm_start, threshold) # Count codons in each gene 
     @inbounds count_matrix = @views counts[1] # Count matrix 64 (codons) x n sequences
     @inbounds names = @views counts[2] # Names of each fasta sequence
-    @inbounds ount_matrix = @views count_matrix[stop_mask,:] # Remove entries if removing stop codons
+    @inbounds ount_matrix = @views count_matrix[stop_mask, :] # Remove entries if removing stop codons
     seqs = @views size(count_matrix, 2) # Count how many genes we have
     if isempty(ref_seqs) # If no ref_seqs provided, create a "self" tuple
-        (ref_seqs = (self = fill(true, seqs),)) 
+        (ref_seqs = (self = fill(true, seqs),))
     else
-    @views ref_seqs = @views map(x->x[counts[3]], ref_seqs)
+        @views ref_seqs = @views map(x -> x[counts[3]], ref_seqs)
     end
-    countAA = countsbyAA(count_matrix,dict_uniqueI) # Sum total codons for each amino acid for each sequence
+    countAA = countsbyAA(count_matrix, dict_uniqueI) # Sum total codons for each amino acid for each sequence
     normfreq = normFrequency(count_matrix, countAA, seqs, dict_uniqueI) # Find frequency of each codon within aino acid for each gene
-    @inbounds normsetfreqs = @views map(x->normTotalFreq(count_matrix[:,x], countAA[:,x], dict_uniqueI), ref_seqs) # Find the frequency of each codon across reference subset
-    @inbounds dts = @views map(x->(@. (normfreq - x) ^ 2 / x), normsetfreqs) # Calculate deviation from reference set for each codon
+    @inbounds normsetfreqs = @views map(
+        x -> normTotalFreq(count_matrix[:, x], countAA[:, x], dict_uniqueI),
+        ref_seqs,
+    ) # Find the frequency of each codon across reference subset
+    @inbounds dts = @views map(x -> (@. (normfreq - x)^2 / x), normsetfreqs) # Calculate deviation from reference set for each codon
     dts = map(dts) do y
-                                map((x) -> remove_nan(x, 0.0), y)
-                    end # Remove NaNs
+        map((x) -> remove_nan(x, 0.0), y)
+    end # Remove NaNs
     chisums = map(dts) do dt
         chisum = Array{Float64}(undef, size(countAA, 1), size(countAA, 2))
-        for (i,aa) in enumerate(dict_uniqueI)
-            @inbounds row = @views sum(dt[aa,:],dims = 1) # Sum up deviations for each amino acid
-            @inbounds chisum[i,:] = row
+        for (i, aa) in enumerate(dict_uniqueI)
+            @inbounds row = @views sum(dt[aa, :], dims = 1) # Sum up deviations for each amino acid
+            @inbounds chisum[i, :] = row
         end
         chisum
     end
-    chisqs = map(x-> x .* countAA, chisums) # Calculate chi-squared values
+    chisqs = map(x -> x .* countAA, chisums) # Calculate chi-squared values
     fas = map(chisqs) do chisq
-            @inbounds fa = @. (chisq + countAA - dict_deg) / ((countAA - 1) * dict_deg) # Factor in degeneracy to calculate Fa
-            @inbounds fa[countAA .< 5] .= 0.0
-            fa
-        end
-        res = map(x->vec(eFFNc(x, dict_deg)), fas) # Calculate Nc
+        @inbounds fa = @. (chisq + countAA - dict_deg) / ((countAA - 1) * dict_deg) # Factor in degeneracy to calculate Fa
+        @inbounds fa[countAA.<5] .= 0.0
+        fa
+    end
+    res = map(x -> vec(eFFNc(x, dict_deg)), fas) # Calculate Nc
     return (res..., Identifier = names)
 end
 
@@ -371,7 +451,14 @@ julia> mcb(EXAMPLE_DATA_PATH, ref_seqs = (ribosomal = ribosomal_genes,)); # Calc
 julia> mcb(EXAMPLE_DATA_PATH, ref_seqs = (self = all_genes, ribosomal = ribosomal_genes,)); # Calculate using all genes and ribosomal genes as a reference subset
 ```
 """
-function mcb(filepath::String, dict::CodonDict = DEFAULT_CodonDict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80)
+function mcb(
+    filepath::String,
+    dict::CodonDict = DEFAULT_CodonDict;
+    ref_seqs = (),
+    rm_start = false,
+    rm_stop = false,
+    threshold = 80,
+)
     if rm_stop
         uniqueI = dict.uniqueI_nostops
         deg = dict.deg_nostops
@@ -379,12 +466,19 @@ function mcb(filepath::String, dict::CodonDict = DEFAULT_CodonDict; ref_seqs = (
     else
         uniqueI = dict.uniqueI
         deg = dict.deg
-        stop_mask = fill(true,64)
+        stop_mask = fill(true, 64)
     end
     return mcb(filepath, ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold)
 end
 
-function mcb(filepaths::Vector{String}, dict::CodonDict = DEFAULT_CodonDict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80)
+function mcb(
+    filepaths::Vector{String},
+    dict::CodonDict = DEFAULT_CodonDict;
+    ref_seqs = (),
+    rm_start = false,
+    rm_stop = false,
+    threshold = 80,
+)
     len = length(filepaths)
     results = Vector{Any}(undef, len)
     if rm_stop
@@ -394,41 +488,54 @@ function mcb(filepaths::Vector{String}, dict::CodonDict = DEFAULT_CodonDict; ref
     else
         uniqueI = dict.uniqueI
         deg = dict.deg
-        stop_mask = fill(true,64)
+        stop_mask = fill(true, 64)
     end
     if isempty(ref_seqs)
-        Threads.@threads for i in 1:len
-           @inbounds results[i] = mcb(filepaths[i], ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold)
-            end
+        Threads.@threads for i = 1:len
+            @inbounds results[i] =
+                mcb(filepaths[i], ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold)
+        end
     else
-            Threads.@threads for i in 1:len
-                @inbounds results[i] = mcb(filepaths[i], ref_seqs[i], uniqueI, deg, stop_mask, rm_start, threshold)
-             end
+        Threads.@threads for i = 1:len
+            @inbounds results[i] =
+                mcb(filepaths[i], ref_seqs[i], uniqueI, deg, stop_mask, rm_start, threshold)
+        end
     end
-    
+
     return results
 end
 
-function mcb(fasta_seq::String, ref_seqs, dict_uniqueI::Vector{Vector{Int32}}, dict_deg::Vector{Int32}, stop_mask::Vector{Bool}, rm_start::Bool, threshold::Integer)
+function mcb(
+    fasta_seq::String,
+    ref_seqs,
+    dict_uniqueI::Vector{Vector{Int32}},
+    dict_deg::Vector{Int32},
+    stop_mask::Vector{Bool},
+    rm_start::Bool,
+    threshold::Integer,
+)
     counts = count_codons(fasta_seq, rm_start, threshold) # Count codons in each gene 
     @inbounds count_matrix = @views counts[1] # Count matrix 64 (codons) x n sequences
     @inbounds names = @views counts[2] # Names of each fasta sequence
-    @inbounds count_matrix = @views count_matrix[stop_mask,:] # Remove entries if removing stop codons
+    @inbounds count_matrix = @views count_matrix[stop_mask, :] # Remove entries if removing stop codons
     seqs = @views size(count_matrix, 2) # Count how many genes we have
     if isempty(ref_seqs) # If no ref_seqs provided, create a "self" tuple
-        (ref_seqs = (self = fill(true, seqs),)) 
+        (ref_seqs = (self = fill(true, seqs),))
     else
-    @inbounds ref_seqs = @views map(x->x[counts[3]], ref_seqs)
+        @inbounds ref_seqs = @views map(x -> x[counts[3]], ref_seqs)
     end
-    countAA = countsbyAA(count_matrix,dict_uniqueI) # Sum total codons for each amino acid for each sequence
-    @inbounds A = countAA[dict_deg .> 1,:] .> 0
+    countAA = countsbyAA(count_matrix, dict_uniqueI) # Sum total codons for each amino acid for each sequence
+    @inbounds A = countAA[dict_deg.>1, :] .> 0
     normfreq = normFrequency(count_matrix, countAA, seqs, dict_uniqueI) # Find frequency of each codon within each amino acid for each gene
-    @inbounds normsetfreqs = @views map(x->normTotalFreq(count_matrix[:,x], countAA[:,x], dict_uniqueI), ref_seqs) # Find the frequency of each codon across reference subset
-    @inbounds dts = map(x->(@. (normfreq - x) ^ 2 / x), normsetfreqs)
+    @inbounds normsetfreqs = @views map(
+        x -> normTotalFreq(count_matrix[:, x], countAA[:, x], dict_uniqueI),
+        ref_seqs,
+    ) # Find the frequency of each codon across reference subset
+    @inbounds dts = map(x -> (@. (normfreq - x)^2 / x), normsetfreqs)
     dts = map(dts) do y
-                                map((x) -> remove_nan(x, 0.0), y)
-                            end # Remove NaNs
-    no_counts = count_matrix .<= 0 
+        map((x) -> remove_nan(x, 0.0), y)
+    end # Remove NaNs
+    no_counts = count_matrix .<= 0
     dts = map(dts) do dt
         @inbounds dt[no_counts] .= 0
         dt
@@ -436,15 +543,15 @@ function mcb(fasta_seq::String, ref_seqs, dict_uniqueI::Vector{Vector{Int32}}, d
 
     bas = map(dts) do dt
         ba = Array{Float64}(undef, size(countAA, 1), size(countAA, 2))
-        for (i,aa) in enumerate(dict_uniqueI)
-            @inbounds row = @views sum(dt[aa,:],dims = 1)
-            @inbounds ba[i,:] = row
+        for (i, aa) in enumerate(dict_uniqueI)
+            @inbounds row = @views sum(dt[aa, :], dims = 1)
+            @inbounds ba[i, :] = row
         end
         ba
     end
 
     mcbs = map(bas) do ba
-        mat1 = @. ba[dict_deg > 1,:] * log10(countAA[dict_deg > 1, :])
+        mat1 = @. ba[dict_deg>1, :] * log10(countAA[dict_deg>1, :])
         mat1 = map((x) -> isnan(x) ? 0.0 : x, mat1)
         vec(sum(mat1, dims = 1) ./ sum(A, dims = 1))
     end
@@ -499,7 +606,14 @@ julia> milc(EXAMPLE_DATA_PATH, ref_seqs = (ribosomal = ribosomal_genes,)); # Cal
 julia> milc(EXAMPLE_DATA_PATH, ref_seqs = (self = all_genes, ribosomal = ribosomal_genes,)); # Calculate using all genes and ribosomal genes as a reference subset
 ```
 """
-function milc(filepath::String, dict::CodonDict = DEFAULT_CodonDict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80)
+function milc(
+    filepath::String,
+    dict::CodonDict = DEFAULT_CodonDict;
+    ref_seqs = (),
+    rm_start = false,
+    rm_stop = false,
+    threshold = 80,
+)
     if rm_stop
         uniqueI = dict.uniqueI_nostops
         deg = dict.deg_nostops
@@ -507,12 +621,19 @@ function milc(filepath::String, dict::CodonDict = DEFAULT_CodonDict; ref_seqs = 
     else
         uniqueI = dict.uniqueI
         deg = dict.deg
-        stop_mask = fill(true,64)
+        stop_mask = fill(true, 64)
     end
     return milc(filepath, ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold)
 end
 
-function milc(filepaths::Vector{String}, dict::CodonDict = DEFAULT_CodonDict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80)
+function milc(
+    filepaths::Vector{String},
+    dict::CodonDict = DEFAULT_CodonDict;
+    ref_seqs = (),
+    rm_start = false,
+    rm_stop = false,
+    threshold = 80,
+)
     len = length(filepaths)
     results = Vector{Any}(undef, len)
     if rm_stop
@@ -522,51 +643,69 @@ function milc(filepaths::Vector{String}, dict::CodonDict = DEFAULT_CodonDict; re
     else
         uniqueI = dict.uniqueI
         deg = dict.deg
-        stop_mask = fill(true,64)
+        stop_mask = fill(true, 64)
     end
     if isempty(ref_seqs)
-    Threads.@threads for i in 1:len
-       @inbounds results[i] = milc(filepaths[i], ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold)
-    end
+        Threads.@threads for i = 1:len
+            @inbounds results[i] =
+                milc(filepaths[i], ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold)
+        end
     else
-        Threads.@threads for i in 1:len
-            @inbounds results[i] = milc(filepaths[i], ref_seqs[i], uniqueI, deg, stop_mask, rm_start, threshold)
-         end
+        Threads.@threads for i = 1:len
+            @inbounds results[i] = milc(
+                filepaths[i],
+                ref_seqs[i],
+                uniqueI,
+                deg,
+                stop_mask,
+                rm_start,
+                threshold,
+            )
+        end
     end
-    
+
     return results
 end
 
-function milc(fasta_seq::String, ref_seqs, dict_uniqueI::Vector{Vector{Int32}}, dict_deg::Vector{Int32}, stop_mask::Vector{Bool}, rm_start::Bool, threshold::Integer)
+function milc(
+    fasta_seq::String,
+    ref_seqs,
+    dict_uniqueI::Vector{Vector{Int32}},
+    dict_deg::Vector{Int32},
+    stop_mask::Vector{Bool},
+    rm_start::Bool,
+    threshold::Integer,
+)
     counts = count_codons(fasta_seq, rm_start, threshold) # Count codons in each gene 
     @inbounds count_matrix = @views counts[1] # Count matrix 64 (codons) x n sequences
     @inbounds names = @views counts[2] # Names of each fasta sequence
-    @inbounds count_matrix = count_matrix[stop_mask,:] # Remove entries if removing stop codons
-    lengths =  @views transpose(sum(count_matrix, dims = 1)) # Find lengths of each gene (in codons)
+    @inbounds count_matrix = count_matrix[stop_mask, :] # Remove entries if removing stop codons
+    lengths = @views transpose(sum(count_matrix, dims = 1)) # Find lengths of each gene (in codons)
     seqs = @views size(count_matrix, 2) # Count how many genes we have
     if isempty(ref_seqs) # If no ref_seqs provided, create a "self" tuple
-        (ref_seqs = (self = fill(true, seqs),)) 
+        (ref_seqs = (self = fill(true, seqs),))
     else
-    ref_seqs = @views map(x->x[counts[3]], ref_seqs)
+        ref_seqs = @views map(x -> x[counts[3]], ref_seqs)
     end
-    countAA = countsbyAA(count_matrix,dict_uniqueI) # Sum total codons for each amino acid for each sequence
+    countAA = countsbyAA(count_matrix, dict_uniqueI) # Sum total codons for each amino acid for each sequence
     normfreq = normFrequency(count_matrix, countAA, seqs, dict_uniqueI) # Find the frequency of each codon for each gene
-    @inbounds normsetfreqs = map(x->normTotalFreq(count_matrix[:,x], countAA[:,x], dict_uniqueI), ref_seqs) # Find the frequency of each codon across reference subset
+    @inbounds normsetfreqs =
+        map(x -> normTotalFreq(count_matrix[:, x], countAA[:, x], dict_uniqueI), ref_seqs) # Find the frequency of each codon across reference subset
     cor = correction_term(countAA, lengths, dict_deg) # Calculate correction term
-    @inbounds per_codon_mas = map(x->(@. log(normfreq / x) * count_matrix), normsetfreqs) # Calculate Ma for each codon
+    @inbounds per_codon_mas = map(x -> (@. log(normfreq / x) * count_matrix), normsetfreqs) # Calculate Ma for each codon
     fixed_per_codon_mas = map(per_codon_mas) do y
-                                map((x) -> remove_nan(x, 0.0), y)
-                            end # Remove NaNs
+        map((x) -> remove_nan(x, 0.0), y)
+    end # Remove NaNs
     mas = map(fixed_per_codon_mas) do pcmas
         ma = Array{Float64}(undef, size(countAA, 1), size(countAA, 2)) # Pre-allocate matrix for Ma across each amino acid
-        for (i,aa) in enumerate(dict_uniqueI)
-            @inbounds @views row = 2 .* sum(pcmas[aa,:],dims = 1) # Calculate ma for each amino acid
-            @inbounds ma[i,:] = row
+        for (i, aa) in enumerate(dict_uniqueI)
+            @inbounds @views row = 2 .* sum(pcmas[aa, :], dims = 1) # Calculate ma for each amino acid
+            @inbounds ma[i, :] = row
         end
         ma
     end
     milcs = map(mas) do ma
-       @inbounds @views vec(([sum(ma, dims = 1)...] ./ lengths) .- cor) # Calculate MILC for each gene
+        @inbounds @views vec(([sum(ma, dims = 1)...] ./ lengths) .- cor) # Calculate MILC for each gene
     end
     return (milcs..., Identifier = names)
 end
@@ -610,7 +749,13 @@ julia> scuo(EXAMPLE_DATA_PATH, ALSTART_CodonDict); # Code TTG and CTG as methion
 julia> scuo(EXAMPLE_DATA_PATH, rm_start = true); # Remove start codons
 ```
 """
-function scuo(filepath::String, dict::CodonDict = DEFAULT_CodonDict; rm_start = false, rm_stop = false, threshold = 80)
+function scuo(
+    filepath::String,
+    dict::CodonDict = DEFAULT_CodonDict;
+    rm_start = false,
+    rm_stop = false,
+    threshold = 80,
+)
     if rm_stop
         uniqueI = dict.uniqueI_nostops
         deg = dict.deg_nostops
@@ -618,12 +763,18 @@ function scuo(filepath::String, dict::CodonDict = DEFAULT_CodonDict; rm_start = 
     else
         uniqueI = dict.uniqueI
         deg = dict.deg
-        stop_mask = fill(true,64)
+        stop_mask = fill(true, 64)
     end
     return scuo(filepath, uniqueI, deg, stop_mask, rm_start, threshold)
 end
 
-function scuo(filepaths::Vector{String}, dict::CodonDict = DEFAULT_CodonDict; rm_start = false, rm_stop = false, threshold = 80)
+function scuo(
+    filepaths::Vector{String},
+    dict::CodonDict = DEFAULT_CodonDict;
+    rm_start = false,
+    rm_stop = false,
+    threshold = 80,
+)
     len = length(filepaths)
     results = Vector{Vector{Float64}}(undef, len)
     if rm_stop
@@ -633,37 +784,45 @@ function scuo(filepaths::Vector{String}, dict::CodonDict = DEFAULT_CodonDict; rm
     else
         uniqueI = dict.uniqueI
         deg = dict.deg
-        stop_mask = fill(true,64)
+        stop_mask = fill(true, 64)
     end
-    Threads.@threads for i in 1:len
-       @inbounds results[i] = scuo(filepaths[i], uniqueI, deg, stop_mask, rm_start, threshold)
+    Threads.@threads for i = 1:len
+        @inbounds results[i] =
+            scuo(filepaths[i], uniqueI, deg, stop_mask, rm_start, threshold)
     end
-    
+
     return results
 end
 
 
-function scuo(fasta_seq::String, dict_uniqueI::Vector{Vector{Int32}}, dict_deg::Vector{Int32}, stop_mask::Vector{Bool}, rm_start::Bool, threshold::Integer)
+function scuo(
+    fasta_seq::String,
+    dict_uniqueI::Vector{Vector{Int32}},
+    dict_deg::Vector{Int32},
+    stop_mask::Vector{Bool},
+    rm_start::Bool,
+    threshold::Integer,
+)
     counts = count_codons(fasta_seq, rm_start, threshold) # Count codons in each gene 
     @inbounds @views count_matrix = counts[1] # This is our codon count matrix
     @inbounds @views names = counts[2] # These are the names of each sequence
-    @inbounds @views count_matrix = count_matrix[stop_mask,:] # Remove entries if removing stop codons
+    @inbounds @views count_matrix = count_matrix[stop_mask, :] # Remove entries if removing stop codons
     seqs = @views size(count_matrix, 2) # Count how many genes we have
-    countAA = countsbyAA(count_matrix,dict_uniqueI) # Find amino acid count matrix
+    countAA = countsbyAA(count_matrix, dict_uniqueI) # Find amino acid count matrix
 
     Ha = scuo_freq(count_matrix, countAA, seqs, dict_uniqueI) # Calculate normalized frequency of each codon 
-    
+
     Hmax = log10.(dict_deg)
 
     Oa = @views map(x -> (Hmax .- x) ./ Hmax, eachcol(Ha))
     @inbounds Oa = reduce(hcat, Oa)
 
-    @inbounds Fa =  @views countAA ./ sum(countAA[dict_deg .> 1, :], dims = 1)
+    @inbounds Fa = @views countAA ./ sum(countAA[dict_deg.>1, :], dims = 1)
 
     @inbounds mult = Oa .* Fa
     mult = map((x) -> isnan(x) ? 0.0 : x, mult)
 
-    res =  vec(sum(mult, dims = 1))
+    res = vec(sum(mult, dims = 1))
     return (SCUO = res, Identifier = names)
 end
 
@@ -690,7 +849,14 @@ julia> ribosomal_genes = find_seqs(EXAMPLE_DATA_PATH, r"ribosomal"); # Get a vec
 julia> all_cub(EXAMPLE_DATA_PATH, ref_seqs = (ribosomal = ribosomal_genes,)); # Calculate all measures using ribosomal genes as a reference subset
 ```
 """
-function all_cub(filepath::String, dict = DEFAULT_CodonDict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80)
+function all_cub(
+    filepath::String,
+    dict = DEFAULT_CodonDict;
+    ref_seqs = (),
+    rm_start = false,
+    rm_stop = false,
+    threshold = 80,
+)
     if rm_stop
         uniqueI = dict.uniqueI_nostops
         deg = dict.deg_nostops
@@ -698,12 +864,19 @@ function all_cub(filepath::String, dict = DEFAULT_CodonDict; ref_seqs = (), rm_s
     else
         uniqueI = dict.uniqueI
         deg = dict.deg
-        stop_mask = fill(true,64)
+        stop_mask = fill(true, 64)
     end
     return all_cub(filepath, ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold)
 end
 
-function all_cub(filepaths::Vector{String}, dict = DEFAULT_CodonDict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80)
+function all_cub(
+    filepaths::Vector{String},
+    dict = DEFAULT_CodonDict;
+    ref_seqs = (),
+    rm_start = false,
+    rm_stop = false,
+    threshold = 80,
+)
     len = length(filepaths)
     results = Vector{Any}(undef, len)
     if rm_stop
@@ -713,90 +886,115 @@ function all_cub(filepaths::Vector{String}, dict = DEFAULT_CodonDict; ref_seqs =
     else
         uniqueI = dict.uniqueI
         deg = dict.deg
-        stop_mask = fill(true,64)
+        stop_mask = fill(true, 64)
     end
     if isempty(ref_seqs)
-        Threads.@threads for i in 1:len
-           @inbounds results[i] = all_cub(filepaths[i], ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold)
-            end
+        Threads.@threads for i = 1:len
+            @inbounds results[i] = all_cub(
+                filepaths[i],
+                ref_seqs,
+                uniqueI,
+                deg,
+                stop_mask,
+                rm_start,
+                threshold,
+            )
+        end
     else
-            Threads.@threads for i in 1:len
-                @inbounds results[i] = all_cub(filepaths[i], ref_seqs[i], uniqueI, deg, stop_mask, rm_start, threshold)
-             end
+        Threads.@threads for i = 1:len
+            @inbounds results[i] = all_cub(
+                filepaths[i],
+                ref_seqs[i],
+                uniqueI,
+                deg,
+                stop_mask,
+                rm_start,
+                threshold,
+            )
+        end
     end
-    
+
     return results
 end
 
-function all_cub(fasta_seq::String, ref_seqs, dict_uniqueI::Vector{Vector{Int32}}, dict_deg::Vector{Int32}, stop_mask::Vector{Bool}, rm_start::Bool, threshold::Integer)
+function all_cub(
+    fasta_seq::String,
+    ref_seqs,
+    dict_uniqueI::Vector{Vector{Int32}},
+    dict_deg::Vector{Int32},
+    stop_mask::Vector{Bool},
+    rm_start::Bool,
+    threshold::Integer,
+)
     counts = count_codons(fasta_seq, rm_start, threshold) # Count codons in each gene 
     @inbounds @views count_matrix = counts[1] # This is our codon count matrix
     @inbounds @views seqnames = counts[2] # These are our sequence names
-    @inbounds @views count_matrix = count_matrix[stop_mask,:] # Remove entries if removing stop codons
-    lengths =  @views transpose(sum(count_matrix, dims = 1)) # Find lengths of each gene (in codons)
+    @inbounds @views count_matrix = count_matrix[stop_mask, :] # Remove entries if removing stop codons
+    lengths = @views transpose(sum(count_matrix, dims = 1)) # Find lengths of each gene (in codons)
     seqs = @views size(count_matrix, 2) # Count how many genes we have
     if isempty(ref_seqs)
         (ref_seqs = (self = fill(true, seqs),)) # If no reference subset provided, make a "self" subset
     else
-    ref_seqs = @views map(x->x[counts[3]], ref_seqs)
+        ref_seqs = @views map(x -> x[counts[3]], ref_seqs)
     end
-    countAA = countsbyAA(count_matrix,dict_uniqueI) # Count amino acids in each gene
+    countAA = countsbyAA(count_matrix, dict_uniqueI) # Count amino acids in each gene
     normfreq = normFrequency(count_matrix, countAA, seqs, dict_uniqueI) # Calculate codon frequency within each amino acid within each gene
-    @inbounds @views normsetfreqs = map(x->normTotalFreq(count_matrix[:,x], countAA[:,x], dict_uniqueI), ref_seqs) # Calculate codon frequency within each amino acid across reference subsets
+    @inbounds @views normsetfreqs =
+        map(x -> normTotalFreq(count_matrix[:, x], countAA[:, x], dict_uniqueI), ref_seqs) # Calculate codon frequency within each amino acid across reference subsets
     # Up to this point, all of the measures should have been the same
 
     # Calculating B
-    @inbounds b_pa = map(x-> x ./ lengths, eachrow(countAA))
+    @inbounds b_pa = map(x -> x ./ lengths, eachrow(countAA))
     b_pa = transpose(reduce(hcat, b_pa))
-    
-    @inbounds b_dts = map(x->abs.((normfreq .- x)), normsetfreqs) # This is good
+
+    @inbounds b_dts = map(x -> abs.((normfreq .- x)), normsetfreqs) # This is good
     b_dts = map(b_dts) do y
         map((x) -> remove_nan(x, 0.0), y)
     end
     b_bas = map(b_dts) do dt
         ba = Array{Float64}(undef, size(countAA, 1), size(countAA, 2))
-        for (i,aa) in enumerate(dict_uniqueI)
-            @inbounds @views row = @views sum(dt[aa,:],dims = 1)
-            @inbounds @views ba[i,:] = row
+        for (i, aa) in enumerate(dict_uniqueI)
+            @inbounds @views row = @views sum(dt[aa, :], dims = 1)
+            @inbounds @views ba[i, :] = row
         end
         ba
     end
     B_result = map(b_bas) do ba
-         vec(sum(ba .* b_pa, dims = 1))
+        vec(sum(ba .* b_pa, dims = 1))
     end
     # End calculating B (B is the result)
 
     # Calculate ENC
-    pi_vec =  enc_pi(count_matrix, countAA, seqs, dict_uniqueI)
-    @inbounds enc_fa =  @. (countAA * pi_vec - 1) / (countAA - 1)
+    pi_vec = enc_pi(count_matrix, countAA, seqs, dict_uniqueI)
+    @inbounds enc_fa = @. (countAA * pi_vec - 1) / (countAA - 1)
     @inboudns enc_fa[isnan.(enc_fa)] .= 0.0
     ENC_result = (ENC = vec(eFFNc(enc_fa, dict_deg)),)
     # End calculating ENC (ENC is the result)
 
     # Calculate ENC'
-    @inbounds encp_dts = map(x->(@. (normfreq - x) ^ 2 / x), normsetfreqs) # Calculate Ma for each codon
+    @inbounds encp_dts = map(x -> (@. (normfreq - x)^2 / x), normsetfreqs) # Calculate Ma for each codon
     encp_dts = map(encp_dts) do y
-                                map((x) -> remove_nan(x, 0.0), y)
-                            end # Remove NaNs
+        map((x) -> remove_nan(x, 0.0), y)
+    end # Remove NaNs
     encp_chisums = map(encp_dts) do dt
         chisum = Array{Float64}(undef, size(countAA, 1), size(countAA, 2))
-        for (i,aa) in enumerate(dict_uniqueI)
-            @inbounds row = @views sum(dt[aa,:],dims = 1)
-            @inbounds chisum[i,:] = row
+        for (i, aa) in enumerate(dict_uniqueI)
+            @inbounds row = @views sum(dt[aa, :], dims = 1)
+            @inbounds chisum[i, :] = row
         end
         chisum
     end
-    encp_chisqs = map(x-> x .* countAA, encp_chisums) # This also looks good
+    encp_chisqs = map(x -> x .* countAA, encp_chisums) # This also looks good
     encp_fas = map(encp_chisqs) do chisq
-            @inbounds fa = @. (chisq + countAA - dict_deg) / ((countAA - 1) * dict_deg)
-            @inbounds fa[countAA .< 5] .= 0.0
-            fa
-        end
-    ENCP_result = map(x->vec(eFFNc(x, dict_deg)), encp_fas)
+        @inbounds fa = @. (chisq + countAA - dict_deg) / ((countAA - 1) * dict_deg)
+        @inbounds fa[countAA.<5] .= 0.0
+        fa
+    end
+    ENCP_result = map(x -> vec(eFFNc(x, dict_deg)), encp_fas)
     #End calculating ENC' (ENCP is the result)
 
     #Start calculating MCB (can use ENCP dts)
-    no_counts = count_matrix .<= 0 
+    no_counts = count_matrix .<= 0
     mcb_dts = map(encp_dts) do dt
         @inbounds dt[no_counts] .= 0
         dt
@@ -804,55 +1002,63 @@ function all_cub(fasta_seq::String, ref_seqs, dict_uniqueI::Vector{Vector{Int32}
 
     mcb_bas = map(mcb_dts) do dt
         ba = Array{Float64}(undef, size(countAA, 1), size(countAA, 2))
-        for (i,aa) in enumerate(dict_uniqueI)
-            @inbounds row = @views sum(dt[aa,:],dims = 1)
-            @inbounds ba[i,:] = row
+        for (i, aa) in enumerate(dict_uniqueI)
+            @inbounds row = @views sum(dt[aa, :], dims = 1)
+            @inbounds ba[i, :] = row
         end
         ba
     end
-    A = countAA[dict_deg .> 1,:] .> 0
+    A = countAA[dict_deg.>1, :] .> 0
     MCB_result = map(mcb_bas) do ba
-        @inbounds mat1 = @. ba[dict_deg > 1,:] * log10(countAA[dict_deg > 1, :])
+        @inbounds mat1 = @. ba[dict_deg>1, :] * log10(countAA[dict_deg>1, :])
         mat1 = map((x) -> isnan(x) ? 0.0 : x, mat1)
         @inbounds vec(sum(mat1, dims = 1) ./ sum(A, dims = 1))
     end
-        
+
     # End calculating MCB (MCB is the result)
 
     # Start calculating MILC
     cor = correction_term(countAA, lengths, dict_deg) # Calculate correction term
-    @inbounds per_codon_mas = map(x->(@. log(normfreq / x) * count_matrix), normsetfreqs) # Calculate Ma for each codon
+    @inbounds per_codon_mas = map(x -> (@. log(normfreq / x) * count_matrix), normsetfreqs) # Calculate Ma for each codon
     fixed_per_codon_mas = map(per_codon_mas) do y
-                                map((x) -> remove_nan(x, 0.0), y)
-                            end # Remove NaNs
+        map((x) -> remove_nan(x, 0.0), y)
+    end # Remove NaNs
     mas = map(fixed_per_codon_mas) do pcmas
         ma = Array{Float64}(undef, size(countAA, 1), size(countAA, 2)) # Pre-allocate matrix for Ma across each amino acid
-        for (i,aa) in enumerate(dict_uniqueI)
-            @inbounds row = 2 .* sum(pcmas[aa,:],dims = 1) # Calculate ma for each amino acid
-            @inbounds ma[i,:] = row
+        for (i, aa) in enumerate(dict_uniqueI)
+            @inbounds row = 2 .* sum(pcmas[aa, :], dims = 1) # Calculate ma for each amino acid
+            @inbounds ma[i, :] = row
         end
         ma
     end
     MILC_result = map(mas) do ma
-       @inbounds @views vec(([sum(ma, dims = 1)...] ./ lengths) .- cor) # Calculate MILC for each gene
+        @inbounds @views vec(([sum(ma, dims = 1)...] ./ lengths) .- cor) # Calculate MILC for each gene
     end
     # End calculating MILC (MILC is the result)
 
     # Start calculating SCUO
     Ha = scuo_freq(count_matrix, countAA, seqs, dict_uniqueI)
-    
+
     Hmax = log10.(dict_deg)
 
     Oa = map(x -> (Hmax .- x) ./ Hmax, eachcol(Ha))
     Oa = reduce(hcat, Oa)
 
-    @inbounds Fa = countAA ./ sum(countAA[dict_deg .> 1, :], dims = 1)
+    @inbounds Fa = countAA ./ sum(countAA[dict_deg.>1, :], dims = 1)
 
     @inbounds mult = Oa .* Fa
     mult = map((x) -> isnan(x) ? 0.0 : x, mult)
 
     SCUO_result = (SCUO = vec(sum(mult, dims = 1)),)
 
-    return (B = B_result, ENC = ENC_result, ENCP = ENCP_result, MCB = MCB_result, MILC = MILC_result, SCUO = SCUO_result, Identifier = seqnames)
+    return (
+        B = B_result,
+        ENC = ENC_result,
+        ENCP = ENCP_result,
+        MCB = MCB_result,
+        MILC = MILC_result,
+        SCUO = SCUO_result,
+        Identifier = seqnames,
+    )
 
 end

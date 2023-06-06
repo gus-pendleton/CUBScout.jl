@@ -15,4 +15,3 @@ using Test
     @test isapprox(fop(EXAMPLE_DATA_PATH, ribosomal_genes).FOP[1]) == 0.567816092
     @test isapprox(gcb(EXAMPLE_DATA_PATH).GCB[1]) == -0.0587654329
 end
-
