@@ -1,4 +1,5 @@
 
+# Counting Codons for filepaths
 const TABLE = let
     table = fill(0xff, 2^8)
     for (n, v) in [('A', 0), ('C', 1), ('G', 2), ('T', 3), ('U', 3)]
@@ -59,6 +60,72 @@ function count_codons(path::AbstractString, remove_start, threshold)
     end
 end
 
+# Counting codons for BioSequences
+function count_codons(seq::NucSeq, remove_start::Bool)
+    cod_space = zeros(Int, (4,4,4)) 
+    remaining = remove_start ? 6 : 3
+    index = Int8[0,0,0]
+    for nuc in seq
+        if remaining > 3 
+            remaining -= 1
+            continue
+        end
+        bit = BioSequences.encoded_data(nuc)
+        if count_ones(bit) == 1 # 34 here
+              @inbounds index[remaining] = trailing_zeros(bit) + 1 
+              remaining -= 1
+        else
+         remaining -= 3
+        end
+        if remaining < 1 #Another 23
+            @inbounds @views cod_space[index[1], index[2], index[3]] += 1 
+            remaining = 3
+        end
+    end
+    return @inbounds @views reshape(cod_space, 64, 1)
+end
+
+function count_codons!(cod_array::AbstractArray{<:Integer}, index::AbstractArray{<:Integer}, seq::NucSeq, rem)
+    fill!(cod_array, 0)
+    remaining = rem
+    for nuc in seq
+        if remaining > 3 
+            remaining -= 1
+            continue
+        end
+        bit = BioSequences.encoded_data(nuc)
+        if count_ones(bit) == 1 # 34 here
+              @inbounds index[remaining] = trailing_zeros(bit) + 1 
+              remaining -= 1
+        else
+         remaining -= 3
+        end
+        if remaining < 1 #Another 23
+            @inbounds @views cod_array[index[1], index[2], index[3]] += 1 
+            remaining = 3
+        end
+    end
+    return @inbounds @views reshape(cod_array, 64, 1)
+end
+
+
+
+function count_codons(sequence::Vector{<:NucSeq}, remove_start::Bool, threshold::Integer)
+    buffer = zeros(Int, (4,4,4))
+    i_array = zeros(Int, 3)
+    result = Int32[]
+    length_passes = Bool[]
+    rem = remove_start ? 6 : 3
+    for cds in sequence
+        count_codons!(buffer, i_array, cds, rem)
+        length_pass = sum(buffer) > threshold
+        push!(length_passes, length_pass)
+        if length_pass
+            @inbounds append!(result, buffer)
+        end
+    end
+    @inbounds (reshape(result, 64, :), length_passes)
+end
 
 function countsbyAA(count_matrix, dict_uniqueI)
     aa_matrix = Matrix{Int64}(undef, length(dict_uniqueI), size(count_matrix, 2))
@@ -236,3 +303,26 @@ end
 
 nanmean(x) = mean(filter(!isnan, x))
 nanmean(x, y) = mapslices(nanmean, x, dims = y)
+
+
+function codon_frequency(codon_counts::Matrix{<:Integer}, dict::CodonDict, form::String)
+    form in ("net_genomic", "byAA_genomic", "net_gene", "byAA_gene") || error("""Invalid form. Please provide. Acceptable forms include "net_genomic", "byAA_genomic", "net_gene", or "byAA_gene".""")
+    if form == "net_genomic"
+        return @views sum(codon_counts, dims = 2) ./ sum(codon_counts)
+    elseif form == "net_gene"
+        geneNet = Float64[]
+        lengths = @views transpose(sum(codon_counts, dims = 1))
+        for (x, l) in zip(eachcol(codon_counts), lengths)
+            append!(geneNet, x ./ l)
+        end
+        return reshape(geneNet, 64, :)
+    else
+        countAA = countsbyAA(codon_counts, dict.uniqueI)
+        if form == "byAA_genomic"
+            return normTotalFreq(codon_counts, countAA, dict.uniqueI)
+        end
+        seqs = @views size(codon_counts, 2) 
+        return normFrequency(codon_counts, countAA, seqs, dict.uniqueI)
+    end
+
+end

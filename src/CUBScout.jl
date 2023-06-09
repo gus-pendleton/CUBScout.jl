@@ -2,7 +2,7 @@ module CUBScout
 
 using FASTX: FASTAReader, sequence, identifier, description
 using DelimitedFiles: readdlm
-using BioSequences: BioSequences, LongDNA
+using BioSequences: BioSequences, LongDNA, NucSeq, encoded_data
 using Artifacts
 using Statistics: mean
 
@@ -14,7 +14,9 @@ export CodonDict,
     EXAMPLE_DATA_PATH,
     find_seqs,
     seq_names,
-    seq_descriptions
+    seq_descriptions,
+    count_codons,
+    codon_frequency
 export b, enc, enc_p, mcb, milc, scuo, all_cub
 export e, melp, cai, fop, gcb
 
