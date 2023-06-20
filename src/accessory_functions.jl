@@ -373,7 +373,7 @@ julia> codon_frequency(count_matrix, "net_genomic") |> size
 (64, 1)
 
 julia> codon_frequency(count_matrix, "net_gene") |> size
- (64, 4237)
+(64, 4237)
 ```
 """
 function codon_frequency(codon_counts::Matrix{<:Integer}, form::String, dict::CodonDict = DEFAULT_CodonDict)
