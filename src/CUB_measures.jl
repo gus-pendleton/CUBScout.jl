@@ -1,14 +1,14 @@
 # B
 """
-    b(filepath::String, dict::CodonDict = DEFAULT_CodonDict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80)
-    b(filepaths::Vector{String}, dict::CodonDict = DEFAULT_CodonDict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80)
+    b(sequences::Union{String, IO, FASTAReader, Vector{<:NucSeq}}, dict::CodonDict = DEFAULT_CodonDict; names::Union{Vector{String}, Nothing} = nothing, ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80)
+    b(sequences::Union{Vector{String}, Vector{<:IO}, Vector{<:FASTAReader}, Vector{<:Vector{<:NucSeq}}}, dict::CodonDict = DEFAULT_CodonDict; names::Union{Vector{Vector{String}}, Nothing} = nothing, ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80)
 Calculate B from Karlin and Mrazek, 1996. 
 
 # Arguments
-- `filepath`: path to fasta file of coding sequences (e.g. .fasta, .fna, .fa). There are no quality checks, so it's assumed that each entry is assumed to be an individual coding sequence, in the correct frame, without 5' or 3' untranslated regions.
-- `filepaths`: vector of paths to fasta files of coding sequences (e.g. .fasta, .fna, .fa). `CUBScout` is multithreaded; if there are multiple threads available, `CUBScout` will allocate a thread for each filepath. As such, providing a vector of paths as an argument will be faster than broadcasting across a vector of paths. Because a single file is only accessed by a single thread, it's never worth using more threads than the total number of files being analyzed. There are no quality checks, so it's assumed that each entry is an individual coding sequence, in the correct frame, without 5' or 3' untranslated regions.
+- `sequences`: DNA or RNA sequences to be analyzed, which should be coding sequences only. This can take quite a few forms depending on your use case. It can be a path to fasta file of coding sequences (e.g. .fasta, .fna, .fa), or a IO or FASTAReader pointing to these fasta files. It can also be a vector of BioSequences, if you've already brought them into Julia's environment. There are no quality checks, so it's assumed that each entry is assumed to be an individual coding sequence, in the correct frame, without 5' or 3' untranslated regions. If you are analyzing multiple genomes (or sets of sequences), `sequences` could instead be a vector of filepaths, IOStreams, FASTAReaders, or vectors of sequences, with each vector corresponding to a genome. `CUBScout` is multithreaded; if there are multiple threads available, `CUBScout` will allocate a thread for each filepath. As such, providing a vector of filepaths (or `Vector{<:Vector{<:NucSeq}}`) as an argument will be faster than broadcasting across a vector of paths. Because a single file is only accessed by a single thread, it's never worth using more threads than the total number of files being analyzed.
 - `dict`: codon dictionary of type `CodonDict`. The standard genetic code is loaded by default, but if necessary you can create your own codon dictionary using `make_CodonDict`
-- `ref_seqs`: by default, codon usage bias for each gene is calculated using the whole genome ("self") as a reference subset. If you would like to specify your own subsets to calculate against, such as ribosomal genes, `ref_seqs` takes a named tuple in the form `("subset_name" = Bool[],)`, where `Bool[]` is the same length as the number of sequences in your fasta file, and contains `true` for sequences you want as your reference subset and false for those you don't. You can use `find_seqs()` to generate this vector. You can provide multiple reference subsets as separate entries in the named tuple, and `CUBScout` will return the calculated measure using each subset. If providing multiple filepaths and want custom reference sets, `ref_seqs` should be a vector of named tuples corresponding to the vector of filepaths.
+- `names`: An optional vector of names for each sequence. Only relevant if providing a vector of BioSequences, as names are automatically pulled from fasta files. If `sequences` is of type `Vector{<:Vector{<:NucSeq}}`, `names` should be of type `Vector{Vector{String}}`
+- `ref_seqs`: by default, codon usage bias for each gene is calculated using the whole genome ("self") as a reference subset. If you would like to specify your own subsets to calculate against, such as ribosomal genes, `ref_seqs` takes a named tuple in the form `("subset_name" = Bool[],)`, where `Bool[]` is the same length as the number of sequences in your fasta file, and contains `true` for sequences you want as your reference subset and false for those you don't. You can use `find_seqs()` to generate this vector. You can provide multiple reference subsets as separate entries in the named tuple, and `CUBScout` will return the calculated measure using each subset. If providing multiple sets of sequences and want custom reference sets, `ref_seqs` should be a vector of named tuples corresponding to the vector of sequences.
 - `rm_start`: whether to ignore the first codon of each sequence. Many organisms use alternative start codons such as TTG and CTG, which in other locations would generally code for leucine. There are a few approaches to deal with this. By default, `CUBScout` keeps each start codon and assigns it as though it were any other codon. Of course, this would slightly change leucine's contribution to codon usage bias. If you set `rm_start` to `true`, the first codon of every sequence is simply discarded. This will also affect the gene's length, which means it could be removed if it falls under the threshold. Other CUB packages (such as R's coRdon, alt.init = TRUE), assign all TTG and CTG codons to methionine, regardless of their location. I disagree with this approach from a biological perspective; those codons still code for leucine most of the time they are used. However, if you want matching output as you would get from coRdon, you can supply `ALTSTART_CodonDict` to the `dict` argument, and keep `rm_start` as `false`.
 - `rm_stop`: whether to remove stop codons from calculations of codon usage bias.
 - `threshold`: minimum length of a gene (in codons) to be used in codon usage bias calculations. By default this is set to 80 codons; any genes less than or equal to that length are discarded. If you want no genes discarded, set `threshold` to 0.
@@ -47,8 +47,9 @@ julia> b(EXAMPLE_DATA_PATH, ref_seqs = (self = all_genes, ribosomal = ribosomal_
 ```
 """
 function b(
-    filepath::String,
+    sequences::Union{String, IO, FASTAReader, Vector{<:NucSeq}},
     dict::CodonDict = DEFAULT_CodonDict;
+    names::Union{Vector{String}, Nothing} = nothing,
     ref_seqs = (),
     rm_start = false,
     rm_stop = false,
@@ -62,18 +63,19 @@ function b(
         stop_mask = fill(true, 64)
     end
 
-    return b(filepath, ref_seqs, uniqueI, stop_mask, rm_start, threshold)
+    return b(sequences, ref_seqs, uniqueI, stop_mask, rm_start, threshold, names)
 end
 
 function b(
-    filepaths::Vector{String},
+    sequences::Union{Vector{String}, Vector{<:IO}, Vector{<:FASTAReader}, Vector{<:Vector{<:NucSeq}}},
     dict::CodonDict = DEFAULT_CodonDict;
+    names::Union{Vector{Vector{String}}, Nothing} = nothing,
     ref_seqs = (),
     rm_start = false,
     rm_stop = false,
     threshold = 80,
 )
-    len = length(filepaths)
+    len = length(sequences)
     results = Vector{Any}(undef, len)
     if rm_stop
         uniqueI = dict.uniqueI_nostops
@@ -82,29 +84,43 @@ function b(
         uniqueI = dict.uniqueI
         stop_mask = fill(true, 64)
     end
-    if isempty(ref_seqs)
+    if isempty(ref_seqs) & isnothing(names)
         Threads.@threads for i = 1:len
             @inbounds results[i] =
-                b(filepaths[i], ref_seqs, uniqueI, stop_mask, rm_start, threshold)
+                b(sequences[i], ref_seqs, uniqueI, stop_mask, rm_start, threshold, names)
+        end
+    elseif isempty(ref_seqs)
+        Threads.@threads for i = 1:len
+            @inbounds results[i] =
+                b(sequences[i], ref_seqs, uniqueI, stop_mask, rm_start, threshold, names[i])
+        end
+    elseif isnothing(names)
+        Threads.@threads for i = 1:len
+            @inbounds results[i] =
+                b(sequences[i], ref_seqs[i], uniqueI, stop_mask, rm_start, threshold, names)
         end
     else
         Threads.@threads for i = 1:len
             @inbounds results[i] =
-                b(filepaths[i], ref_seqs[i], uniqueI, stop_mask, rm_start, threshold)
+                b(sequences[i], ref_seqs[i], uniqueI, stop_mask, rm_start, threshold, names[i])
         end
     end
     return results
 end
 
 function b(
-    fasta_seq::String,
+    fasta_seq::Union{String, IO, FASTAReader, Vector{<:NucSeq}},
     ref_seqs,
     dict_uniqueI::Vector{Vector{Int32}},
     stop_mask::Vector{Bool},
     rm_start::Bool,
     threshold::Integer,
+    names::Union{Vector{String}, Nothing},
 )
-    counts = count_codons(fasta_seq, rm_start, threshold) # Count codons in each gene 
+    counts = if typeof(fasta_seq) <: Vector{<:NucSeq}
+        count_codons(fasta_seq, names = names, remove_start = rm_start, threshold = threshold)
+    else count_codons(fasta_seq, rm_start, threshold) 
+    end# Count codons in each gene 
     @inbounds count_matrix = @views counts[1] # Count matrix 64 (codons) x n sequences
     @inbounds names = @views counts[2] # Names of each fasta sequence
     @inbounds count_matrix = @views count_matrix[stop_mask, :] # Remove entries if removing stop codons
@@ -143,14 +159,14 @@ end
 
 # ENC
 """
-    enc(filepath::String, dict::CodonDict = DEFAULT_CodonDict; rm_start = false, rm_stop = false, threshold = 80)
-    enc(filepaths::Vector{String}, dict::CodonDict = DEFAULT_CodonDict; rm_start = false, rm_stop = false, threshold = 80)
-Calculate ENC from Wright, 1990. 
+    enc(sequences::Union{String, IO, FASTAReader, Vector{<:NucSeq}}, dict::CodonDict = DEFAULT_CodonDict; names::Union{Vector{String}, Nothing} = nothing, rm_start = false, rm_stop = false, threshold = 80)
+    enc(sequences::Union{Vector{String}, Vector{<:IO}, Vector{<:FASTAReader}, Vector{<:Vector{<:NucSeq}}}, dict::CodonDict = DEFAULT_CodonDict; names::Union{Vector{Vector{String}}, Nothing} = nothing, rm_start = false, rm_stop = false, threshold = 80)
+Calculate ENC from Wright, 1990.  
 
 # Arguments
-- `filepath`: path to fasta file of coding sequences (e.g. .fasta, .fna, .fa). There are no quality checks, so it's assumed that each entry is assumed to be an individual coding sequence, in the correct frame, without 5' or 3' untranslated regions.
-- `filepaths`: vector of paths to fasta files of coding sequences (e.g. .fasta, .fna, .fa). `CUBScout` is multithreaded; if there are multiple threads available, `CUBScout` will allocate a thread for each filepath. As such, providing a vector of paths as an argument will be faster than broadcasting across a vector of paths. Because a single file is only accessed by a single thread, it's never worth using more threads than the total number of files being analyzed. There are no quality checks, so it's assumed that each entry is an individual coding sequence, in the correct frame, without 5' or 3' untranslated regions.
+- `sequences`: DNA or RNA sequences to be analyzed, which should be coding sequences only. This can take quite a few forms depending on your use case. It can be a path to fasta file of coding sequences (e.g. .fasta, .fna, .fa), or a IO or FASTAReader pointing to these fasta files. It can also be a vector of BioSequences, if you've already brought them into Julia's environment. There are no quality checks, so it's assumed that each entry is assumed to be an individual coding sequence, in the correct frame, without 5' or 3' untranslated regions. If you are analyzing multiple genomes (or sets of sequences), `sequences` could instead be a vector of filepaths, IOStreams, FASTAReaders, or vectors of sequences, with each vector corresponding to a genome. `CUBScout` is multithreaded; if there are multiple threads available, `CUBScout` will allocate a thread for each filepath. As such, providing a vector of filepaths (or `Vector{<:Vector{<:NucSeq}}`) as an argument will be faster than broadcasting across a vector of paths. Because a single file is only accessed by a single thread, it's never worth using more threads than the total number of files being analyzed.
 - `dict`: codon dictionary of type `CodonDict`. The standard genetic code is loaded by default, but if necessary you can create your own codon dictionary using `make_CodonDict`
+- `names`: An optional vector of names for each sequence. Only relevant if providing a vector of BioSequences, as names are automatically pulled from fasta files. If `sequences` is of type `Vector{<:Vector{<:NucSeq}}`, `names` should be of type `Vector{Vector{String}}`
 - `rm_start`: whether to ignore the first codon of each sequence. Many organisms use alternative start codons such as TTG and CTG, which in other locations would generally code for leucine. There are a few approaches to deal with this. By default, `CUBScout` keeps each start codon and assigns it as though it were any other codon. Of course, this would slightly change leucine's contribution to codon usage bias. If you set `rm_start` to `true`, the first codon of every sequence is simply discarded. This will also affect the gene's length, which means it could be removed if it falls under the threshold. Other CUB packages (such as R's coRdon, alt.init = TRUE), assign all TTG and CTG codons to methionine, regardless of their location. I disagree with this approach from a biological perspective; those codons still code for leucine most of the time they are used. However, if you want matching output as you would get from coRdon, you can supply `ALTSTART_CodonDict` to the `dict` argument, and keep `rm_start` as `false`.
 - `rm_stop`: whether to remove stop codons from calculations of codon usage bias.
 - `threshold`: minimum length of a gene (in codons) to be used in codon usage bias calculations. By default this is set to 80 codons; any genes less than or equal to that length are discarded. If you want no genes discarded, set `threshold` to 0.
@@ -181,8 +197,9 @@ julia> enc(EXAMPLE_DATA_PATH, rm_start = true); # Remove start codons
 ```
 """
 function enc(
-    filepath::String,
+    sequences::Union{String, IO, FASTAReader, Vector{<:NucSeq}},
     dict::CodonDict = DEFAULT_CodonDict;
+    names::Union{Vector{String}, Nothing} = nothing,
     rm_start = false,
     rm_stop = false,
     threshold = 80,
@@ -196,17 +213,18 @@ function enc(
         deg = dict.deg
         stop_mask = fill(true, 64)
     end
-    return enc(filepath, uniqueI, deg, stop_mask, rm_start, threshold)
+    return enc(sequences, uniqueI, deg, stop_mask, rm_start, threshold, names)
 end
 
 function enc(
-    filepaths::Vector{String},
+    sequences::Union{Vector{String}, Vector{<:IO}, Vector{<:FASTAReader}, Vector{<:Vector{<:NucSeq}}},
     dict::CodonDict = DEFAULT_CodonDict;
+    names::Union{Vector{Vector{String}}, Nothing} = nothing,
     rm_start = false,
     rm_stop = false,
     threshold = 80,
 )
-    len = length(filepaths)
+    len = length(sequences)
     results = Vector{Any}(undef, len)
     if rm_stop
         uniqueI = dict.uniqueI_nostops
@@ -217,23 +235,33 @@ function enc(
         deg = dict.deg
         stop_mask = fill(true, 64)
     end
-    Threads.@threads for i = 1:len
-        @inbounds results[i] =
-            enc(filepaths[i], uniqueI, deg, stop_mask, rm_start, threshold)
+    if isnothing(names)
+        Threads.@threads for i = 1:len
+            @inbounds results[i] =
+                enc(sequences[i], uniqueI, deg, stop_mask, rm_start, threshold, names)
+        end
+    else isnothing(names)
+        Threads.@threads for i = 1:len
+            @inbounds results[i] =
+                enc(sequences[i], uniqueI, deg, stop_mask, rm_start, threshold, names[i])
+        end
     end
-
     return results
 end
 
 function enc(
-    fasta_seq::String,
+    fasta_seq::Union{String, IO, FASTAReader, Vector{<:NucSeq}},
     dict_uniqueI::Vector{Vector{Int32}},
-    dict_deg::Vector{Int32},
+    dict_deg::Vector{<:Integer},
     stop_mask::Vector{Bool},
     rm_start::Bool,
     threshold::Integer,
+    names::Union{Vector{String}, Nothing},
 )
-    counts = count_codons(fasta_seq, rm_start, threshold) # Count codons in each gene 
+    counts = if typeof(fasta_seq) <: Vector{<:NucSeq}
+        count_codons(fasta_seq, names = names, remove_start = rm_start, threshold = threshold)
+    else count_codons(fasta_seq, rm_start, threshold) 
+    end # Count codons in each gene 
     @inbounds count_matrix = @views counts[1] # This returns the codon count matrix
     @inbounds names = @views counts[2] # This is the names for each sequence in the file
     @inbounds count_matrix = @views count_matrix[stop_mask, :] # Remove entries if removing stop codons
@@ -248,15 +276,15 @@ end
 
 # ENC Prime
 """
-    enc_p(filepath::String, dict::CodonDict = DEFAULT_CodonDict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80)
-    enc_p(filepaths::Vector{String}, dict::CodonDict = DEFAULT_CodonDict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80)
-Calculate ENC' from Novembre, 2002.
+    enc_p(sequences::Union{String, IO, FASTAReader, Vector{<:NucSeq}}, dict::CodonDict = DEFAULT_CodonDict; names::Union{Vector{String}, Nothing} = nothing, ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80)
+    enc_p(sequences::Union{Vector{String}, Vector{<:IO}, Vector{<:FASTAReader}, Vector{<:Vector{<:NucSeq}}}, dict::CodonDict = DEFAULT_CodonDict; names::Union{Vector{Vector{String}}, Nothing} = nothing, ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80)
+Calculate ENC' from Novembre, 2002. 
 
 # Arguments
-- `filepath`: path to fasta file of coding sequences (e.g. .fasta, .fna, .fa). There are no quality checks, so it's assumed that each entry is assumed to be an individual coding sequence, in the correct frame, without 5' or 3' untranslated regions.
-- `filepaths`: vector of paths to fasta files of coding sequences (e.g. .fasta, .fna, .fa). `CUBScout` is multithreaded; if there are multiple threads available, `CUBScout` will allocate a thread for each filepath. As such, providing a vector of paths as an argument will be faster than broadcasting across a vector of paths. Because a single file is only accessed by a single thread, it's never worth using more threads than the total number of files being analyzed. There are no quality checks, so it's assumed that each entry is an individual coding sequence, in the correct frame, without 5' or 3' untranslated regions.
+- `sequences`: DNA or RNA sequences to be analyzed, which should be coding sequences only. This can take quite a few forms depending on your use case. It can be a path to fasta file of coding sequences (e.g. .fasta, .fna, .fa), or a IO or FASTAReader pointing to these fasta files. It can also be a vector of BioSequences, if you've already brought them into Julia's environment. There are no quality checks, so it's assumed that each entry is assumed to be an individual coding sequence, in the correct frame, without 5' or 3' untranslated regions. If you are analyzing multiple genomes (or sets of sequences), `sequences` could instead be a vector of filepaths, IOStreams, FASTAReaders, or vectors of sequences, with each vector corresponding to a genome. `CUBScout` is multithreaded; if there are multiple threads available, `CUBScout` will allocate a thread for each filepath. As such, providing a vector of filepaths (or `Vector{<:Vector{<:NucSeq}}`) as an argument will be faster than broadcasting across a vector of paths. Because a single file is only accessed by a single thread, it's never worth using more threads than the total number of files being analyzed.
 - `dict`: codon dictionary of type `CodonDict`. The standard genetic code is loaded by default, but if necessary you can create your own codon dictionary using `make_CodonDict`
-- `ref_seqs`: by default, codon usage bias for each gene is calculated using the whole genome ("self") as a reference subset. If you would like to specify your own subsets to calculate against, such as ribosomal genes, `ref_seqs` takes a named tuple in the form `("subset_name" = Bool[],)`, where `Bool[]` is the same length as the number of sequences in your fasta file, and contains `true` for sequences you want as your reference subset and false for those you don't. You can use `find_seqs()` to generate this vector. You can provide multiple reference subsets as separate entries in the named tuple, and `CUBScout` will return the calculated measure using each subset. If providing multiple filepaths and want custom reference sets, `ref_seqs` should be a vector of named tuples corresponding to the vector of filepaths.
+- `names`: An optional vector of names for each sequence. Only relevant if providing a vector of BioSequences, as names are automatically pulled from fasta files. If `sequences` is of type `Vector{<:Vector{<:NucSeq}}`, `names` should be of type `Vector{Vector{String}}`
+- `ref_seqs`: by default, codon usage bias for each gene is calculated using the whole genome ("self") as a reference subset. If you would like to specify your own subsets to calculate against, such as ribosomal genes, `ref_seqs` takes a named tuple in the form `("subset_name" = Bool[],)`, where `Bool[]` is the same length as the number of sequences in your fasta file, and contains `true` for sequences you want as your reference subset and false for those you don't. You can use `find_seqs()` to generate this vector. You can provide multiple reference subsets as separate entries in the named tuple, and `CUBScout` will return the calculated measure using each subset. If providing multiple sets of sequences and want custom reference sets, `ref_seqs` should be a vector of named tuples corresponding to the vector of sequences.
 - `rm_start`: whether to ignore the first codon of each sequence. Many organisms use alternative start codons such as TTG and CTG, which in other locations would generally code for leucine. There are a few approaches to deal with this. By default, `CUBScout` keeps each start codon and assigns it as though it were any other codon. Of course, this would slightly change leucine's contribution to codon usage bias. If you set `rm_start` to `true`, the first codon of every sequence is simply discarded. This will also affect the gene's length, which means it could be removed if it falls under the threshold. Other CUB packages (such as R's coRdon, alt.init = TRUE), assign all TTG and CTG codons to methionine, regardless of their location. I disagree with this approach from a biological perspective; those codons still code for leucine most of the time they are used. However, if you want matching output as you would get from coRdon, you can supply `ALTSTART_CodonDict` to the `dict` argument, and keep `rm_start` as `false`.
 - `rm_stop`: whether to remove stop codons from calculations of codon usage bias.
 - `threshold`: minimum length of a gene (in codons) to be used in codon usage bias calculations. By default this is set to 80 codons; any genes less than or equal to that length are discarded. If you want no genes discarded, set `threshold` to 0.
@@ -295,8 +323,9 @@ julia> enc_p(EXAMPLE_DATA_PATH, ref_seqs = (self = all_genes, ribosomal = riboso
 ```
 """
 function enc_p(
-    filepath::String,
+    sequences::Union{String, IO, FASTAReader, Vector{<:NucSeq}},
     dict::CodonDict = DEFAULT_CodonDict;
+    names::Union{Vector{String}, Nothing} = nothing,
     ref_seqs = (),
     rm_start = false,
     rm_stop = false,
@@ -311,18 +340,19 @@ function enc_p(
         deg = dict.deg
         stop_mask = fill(true, 64)
     end
-    return enc_p(filepath, ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold)
+    return enc_p(sequences, ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold, names)
 end
 
 function enc_p(
-    filepaths::Vector{String},
+    sequences::Union{Vector{String}, Vector{<:IO}, Vector{<:FASTAReader}, Vector{<:Vector{<:NucSeq}}},
     dict::CodonDict = DEFAULT_CodonDict;
+    names::Union{Vector{Vector{String}}, Nothing} = nothing,
     ref_seqs = (),
     rm_start = false,
     rm_stop = false,
     threshold = 80,
 )
-    len = length(filepaths)
+    len = length(sequences)
     results = Vector{Any}(undef, len)
     if rm_stop
         uniqueI = dict.uniqueI_nostops
@@ -333,39 +363,45 @@ function enc_p(
         deg = dict.deg
         stop_mask = fill(true, 64)
     end
-    if isempty(ref_seqs)
+    if isempty(ref_seqs) & isnothing(names)
         Threads.@threads for i = 1:len
             @inbounds results[i] =
-                enc_p(filepaths[i], ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold)
+                enc_p(sequences[i], ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold, names)
+        end
+    elseif isempty(ref_seqs)
+        Threads.@threads for i = 1:len
+            @inbounds results[i] =
+                enc_p(sequences[i], ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold, names[i])
+        end
+    elseif isnothing(names)
+        Threads.@threads for i = 1:len
+            @inbounds results[i] =
+                enc_p(sequences[i], ref_seqs[i], uniqueI, deg, stop_mask, rm_start, threshold, names)
         end
     else
         Threads.@threads for i = 1:len
-            @inbounds results[i] = enc_p(
-                filepaths[i],
-                ref_seqs[i],
-                uniqueI,
-                deg,
-                stop_mask,
-                rm_start,
-                threshold,
-            )
+            @inbounds results[i] =
+                enc_p(sequences[i], ref_seqs[i], uniqueI, deg, stop_mask, rm_start, threshold, names[i])
         end
     end
-
     return results
 end
 
 
 function enc_p(
-    fasta_seq::String,
+    fasta_seq::Union{String, IO, FASTAReader, Vector{<:NucSeq}},
     ref_seqs,
     dict_uniqueI::Vector{Vector{Int32}},
-    dict_deg::Vector{Int32},
+    dict_deg::Vector{<:Integer},
     stop_mask::Vector{Bool},
     rm_start::Bool,
     threshold::Integer,
+    names::Union{Vector{String}, Nothing},
 )
-    counts = count_codons(fasta_seq, rm_start, threshold) # Count codons in each gene 
+    counts = if typeof(fasta_seq) <: Vector{<:NucSeq}
+        count_codons(fasta_seq, names = names, remove_start = rm_start, threshold = threshold)
+    else count_codons(fasta_seq, rm_start, threshold) 
+    end # Count codons in each gene 
     @inbounds count_matrix = @views counts[1] # Count matrix 64 (codons) x n sequences
     @inbounds names = @views counts[2] # Names of each fasta sequence
     @inbounds ount_matrix = @views count_matrix[stop_mask, :] # Remove entries if removing stop codons
@@ -405,15 +441,15 @@ end
 
 # MCB 
 """
-    mcb(filepath::String, dict::CodonDict = DEFAULT_CodonDict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80)
-    mcb(filepaths::Vector{String}, dict::CodonDict = DEFAULT_CodonDict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80)
+    mcb(sequences::Union{String, IO, FASTAReader, Vector{<:NucSeq}}, dict::CodonDict = DEFAULT_CodonDict; names::Union{Vector{String}, Nothing} = nothing, ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80)
+    mcb(sequences::Union{Vector{String}, Vector{<:IO}, Vector{<:FASTAReader}, Vector{<:Vector{<:NucSeq}}}, dict::CodonDict = DEFAULT_CodonDict; names::Union{Vector{Vector{String}}, Nothing} = nothing, ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80)
 Calculate MCB from Urrutia and Hurst, 2001.
 
 # Arguments
-- `filepath`: path to fasta file of coding sequences (e.g. .fasta, .fna, .fa). There are no quality checks, so it's assumed that each entry is assumed to be an individual coding sequence, in the correct frame, without 5' or 3' untranslated regions.
-- `filepaths`: vector of paths to fasta files of coding sequences (e.g. .fasta, .fna, .fa). `CUBScout` is multithreaded; if there are multiple threads available, `CUBScout` will allocate a thread for each filepath. As such, providing a vector of paths as an argument will be faster than broadcasting across a vector of paths. Because a single file is only accessed by a single thread, it's never worth using more threads than the total number of files being analyzed. There are no quality checks, so it's assumed that each entry is an individual coding sequence, in the correct frame, without 5' or 3' untranslated regions.
+- `sequences`: DNA or RNA sequences to be analyzed, which should be coding sequences only. This can take quite a few forms depending on your use case. It can be a path to fasta file of coding sequences (e.g. .fasta, .fna, .fa), or a IO or FASTAReader pointing to these fasta files. It can also be a vector of BioSequences, if you've already brought them into Julia's environment. There are no quality checks, so it's assumed that each entry is assumed to be an individual coding sequence, in the correct frame, without 5' or 3' untranslated regions. If you are analyzing multiple genomes (or sets of sequences), `sequences` could instead be a vector of filepaths, IOStreams, FASTAReaders, or vectors of sequences, with each vector corresponding to a genome. `CUBScout` is multithreaded; if there are multiple threads available, `CUBScout` will allocate a thread for each filepath. As such, providing a vector of filepaths (or `Vector{<:Vector{<:NucSeq}}`) as an argument will be faster than broadcasting across a vector of paths. Because a single file is only accessed by a single thread, it's never worth using more threads than the total number of files being analyzed.
 - `dict`: codon dictionary of type `CodonDict`. The standard genetic code is loaded by default, but if necessary you can create your own codon dictionary using `make_CodonDict`
-- `ref_seqs`: by default, codon usage bias for each gene is calculated using the whole genome ("self") as a reference subset. If you would like to specify your own subsets to calculate against, such as ribosomal genes, `ref_seqs` takes a named tuple in the form `("subset_name" = Bool[],)`, where `Bool[]` is the same length as the number of sequences in your fasta file, and contains `true` for sequences you want as your reference subset and false for those you don't. You can use `find_seqs()` to generate this vector. You can provide multiple reference subsets as separate entries in the named tuple, and `CUBScout` will return the calculated measure using each subset. If providing multiple filepaths and want custom reference sets, `ref_seqs` should be a vector of named tuples corresponding to the vector of filepaths.
+- `names`: An optional vector of names for each sequence. Only relevant if providing a vector of BioSequences, as names are automatically pulled from fasta files. If `sequences` is of type `Vector{<:Vector{<:NucSeq}}`, `names` should be of type `Vector{Vector{String}}`
+- `ref_seqs`: by default, codon usage bias for each gene is calculated using the whole genome ("self") as a reference subset. If you would like to specify your own subsets to calculate against, such as ribosomal genes, `ref_seqs` takes a named tuple in the form `("subset_name" = Bool[],)`, where `Bool[]` is the same length as the number of sequences in your fasta file, and contains `true` for sequences you want as your reference subset and false for those you don't. You can use `find_seqs()` to generate this vector. You can provide multiple reference subsets as separate entries in the named tuple, and `CUBScout` will return the calculated measure using each subset. If providing multiple sets of sequences and want custom reference sets, `ref_seqs` should be a vector of named tuples corresponding to the vector of sequences.
 - `rm_start`: whether to ignore the first codon of each sequence. Many organisms use alternative start codons such as TTG and CTG, which in other locations would generally code for leucine. There are a few approaches to deal with this. By default, `CUBScout` keeps each start codon and assigns it as though it were any other codon. Of course, this would slightly change leucine's contribution to codon usage bias. If you set `rm_start` to `true`, the first codon of every sequence is simply discarded. This will also affect the gene's length, which means it could be removed if it falls under the threshold. Other CUB packages (such as R's coRdon, alt.init = TRUE), assign all TTG and CTG codons to methionine, regardless of their location. I disagree with this approach from a biological perspective; those codons still code for leucine most of the time they are used. However, if you want matching output as you would get from coRdon, you can supply `ALTSTART_CodonDict` to the `dict` argument, and keep `rm_start` as `false`.
 - `rm_stop`: whether to remove stop codons from calculations of codon usage bias.
 - `threshold`: minimum length of a gene (in codons) to be used in codon usage bias calculations. By default this is set to 80 codons; any genes less than or equal to that length are discarded. If you want no genes discarded, set `threshold` to 0.
@@ -452,8 +488,9 @@ julia> mcb(EXAMPLE_DATA_PATH, ref_seqs = (self = all_genes, ribosomal = ribosoma
 ```
 """
 function mcb(
-    filepath::String,
+    sequences::Union{String, IO, FASTAReader, Vector{<:NucSeq}},
     dict::CodonDict = DEFAULT_CodonDict;
+    names::Union{Vector{String}, Nothing} = nothing,
     ref_seqs = (),
     rm_start = false,
     rm_stop = false,
@@ -468,18 +505,19 @@ function mcb(
         deg = dict.deg
         stop_mask = fill(true, 64)
     end
-    return mcb(filepath, ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold)
+    return mcb(sequences, ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold, names)
 end
 
 function mcb(
-    filepaths::Vector{String},
+    sequences::Union{Vector{String}, Vector{<:IO}, Vector{<:FASTAReader}, Vector{<:Vector{<:NucSeq}}},
     dict::CodonDict = DEFAULT_CodonDict;
+    names::Union{Vector{Vector{String}}, Nothing} = nothing,
     ref_seqs = (),
     rm_start = false,
     rm_stop = false,
     threshold = 80,
 )
-    len = length(filepaths)
+    len = length(sequences)
     results = Vector{Any}(undef, len)
     if rm_stop
         uniqueI = dict.uniqueI_nostops
@@ -490,31 +528,44 @@ function mcb(
         deg = dict.deg
         stop_mask = fill(true, 64)
     end
-    if isempty(ref_seqs)
+    if isempty(ref_seqs) & isnothing(names)
         Threads.@threads for i = 1:len
             @inbounds results[i] =
-                mcb(filepaths[i], ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold)
+                mcb(sequences[i], ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold, names)
+        end
+    elseif isempty(ref_seqs)
+        Threads.@threads for i = 1:len
+            @inbounds results[i] =
+                mcb(sequences[i], ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold, names[i])
+        end
+    elseif isnothing(names)
+        Threads.@threads for i = 1:len
+            @inbounds results[i] =
+                mcb(sequences[i], ref_seqs[i], uniqueI, deg, stop_mask, rm_start, threshold, names)
         end
     else
         Threads.@threads for i = 1:len
             @inbounds results[i] =
-                mcb(filepaths[i], ref_seqs[i], uniqueI, deg, stop_mask, rm_start, threshold)
+                mcb(sequences[i], ref_seqs[i], uniqueI, deg, stop_mask, rm_start, threshold, names[i])
         end
     end
-
     return results
 end
 
 function mcb(
-    fasta_seq::String,
+    fasta_seq::Union{String, IO, FASTAReader, Vector{<:NucSeq}},
     ref_seqs,
     dict_uniqueI::Vector{Vector{Int32}},
-    dict_deg::Vector{Int32},
+    dict_deg::Vector{<:Integer},
     stop_mask::Vector{Bool},
     rm_start::Bool,
     threshold::Integer,
+    names::Union{Vector{String}, Nothing},
 )
-    counts = count_codons(fasta_seq, rm_start, threshold) # Count codons in each gene 
+    counts = if typeof(fasta_seq) <: Vector{<:NucSeq}
+        count_codons(fasta_seq, names = names, remove_start = rm_start, threshold = threshold)
+    else count_codons(fasta_seq, rm_start, threshold) 
+    end # Count codons in each gene 
     @inbounds count_matrix = @views counts[1] # Count matrix 64 (codons) x n sequences
     @inbounds names = @views counts[2] # Names of each fasta sequence
     @inbounds count_matrix = @views count_matrix[stop_mask, :] # Remove entries if removing stop codons
@@ -560,15 +611,15 @@ end
 
 # MILC
 """
-    milc(filepath::String, dict::CodonDict = DEFAULT_CodonDict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80)
-    milc(filepaths::Vector{String}, dict::CodonDict = DEFAULT_CodonDict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80)
+    milc(sequences::Union{String, IO, FASTAReader, Vector{<:NucSeq}}, dict::CodonDict = DEFAULT_CodonDict; names::Union{Vector{String}, Nothing} = nothing, ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80)
+    milc(sequences::Union{Vector{String}, Vector{<:IO}, Vector{<:FASTAReader}, Vector{<:Vector{<:NucSeq}}}, dict::CodonDict = DEFAULT_CodonDict; names::Union{Vector{Vector{String}}, Nothing} = nothing, ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80)
 Calculate MILC from Supek and Vlahovicek, 2005.
 
 # Arguments
-- `filepath`: path to fasta file of coding sequences (e.g. .fasta, .fna, .fa). There are no quality checks, so it's assumed that each entry is assumed to be an individual coding sequence, in the correct frame, without 5' or 3' untranslated regions.
-- `filepaths`: vector of paths to fasta files of coding sequences (e.g. .fasta, .fna, .fa). `CUBScout` is multithreaded; if there are multiple threads available, `CUBScout` will allocate a thread for each filepath. As such, providing a vector of paths as an argument will be faster than broadcasting across a vector of paths. Because a single file is only accessed by a single thread, it's never worth using more threads than the total number of files being analyzed. There are no quality checks, so it's assumed that each entry is an individual coding sequence, in the correct frame, without 5' or 3' untranslated regions.
+- `sequences`: DNA or RNA sequences to be analyzed, which should be coding sequences only. This can take quite a few forms depending on your use case. It can be a path to fasta file of coding sequences (e.g. .fasta, .fna, .fa), or a IO or FASTAReader pointing to these fasta files. It can also be a vector of BioSequences, if you've already brought them into Julia's environment. There are no quality checks, so it's assumed that each entry is assumed to be an individual coding sequence, in the correct frame, without 5' or 3' untranslated regions. If you are analyzing multiple genomes (or sets of sequences), `sequences` could instead be a vector of filepaths, IOStreams, FASTAReaders, or vectors of sequences, with each vector corresponding to a genome. `CUBScout` is multithreaded; if there are multiple threads available, `CUBScout` will allocate a thread for each filepath. As such, providing a vector of filepaths (or `Vector{<:Vector{<:NucSeq}}`) as an argument will be faster than broadcasting across a vector of paths. Because a single file is only accessed by a single thread, it's never worth using more threads than the total number of files being analyzed.
 - `dict`: codon dictionary of type `CodonDict`. The standard genetic code is loaded by default, but if necessary you can create your own codon dictionary using `make_CodonDict`
-- `ref_seqs`: by default, codon usage bias for each gene is calculated using the whole genome ("self") as a reference subset. If you would like to specify your own subsets to calculate against, such as ribosomal genes, `ref_seqs` takes a named tuple in the form `("subset_name" = Bool[],)`, where `Bool[]` is the same length as the number of sequences in your fasta file, and contains `true` for sequences you want as your reference subset and false for those you don't. You can use `find_seqs()` to generate this vector. You can provide multiple reference subsets as separate entries in the named tuple, and `CUBScout` will return the calculated measure using each subset. If providing multiple filepaths and want custom reference sets, `ref_seqs` should be a vector of named tuples corresponding to the vector of filepaths.
+- `names`: An optional vector of names for each sequence. Only relevant if providing a vector of BioSequences, as names are automatically pulled from fasta files. If `sequences` is of type `Vector{<:Vector{<:NucSeq}}`, `names` should be of type `Vector{Vector{String}}`
+- `ref_seqs`: by default, codon usage bias for each gene is calculated using the whole genome ("self") as a reference subset. If you would like to specify your own subsets to calculate against, such as ribosomal genes, `ref_seqs` takes a named tuple in the form `("subset_name" = Bool[],)`, where `Bool[]` is the same length as the number of sequences in your fasta file, and contains `true` for sequences you want as your reference subset and false for those you don't. You can use `find_seqs()` to generate this vector. You can provide multiple reference subsets as separate entries in the named tuple, and `CUBScout` will return the calculated measure using each subset. If providing multiple sets of sequences and want custom reference sets, `ref_seqs` should be a vector of named tuples corresponding to the vector of sequences.
 - `rm_start`: whether to ignore the first codon of each sequence. Many organisms use alternative start codons such as TTG and CTG, which in other locations would generally code for leucine. There are a few approaches to deal with this. By default, `CUBScout` keeps each start codon and assigns it as though it were any other codon. Of course, this would slightly change leucine's contribution to codon usage bias. If you set `rm_start` to `true`, the first codon of every sequence is simply discarded. This will also affect the gene's length, which means it could be removed if it falls under the threshold. Other CUB packages (such as R's coRdon, alt.init = TRUE), assign all TTG and CTG codons to methionine, regardless of their location. I disagree with this approach from a biological perspective; those codons still code for leucine most of the time they are used. However, if you want matching output as you would get from coRdon, you can supply `ALTSTART_CodonDict` to the `dict` argument, and keep `rm_start` as `false`.
 - `rm_stop`: whether to remove stop codons from calculations of codon usage bias.
 - `threshold`: minimum length of a gene (in codons) to be used in codon usage bias calculations. By default this is set to 80 codons; any genes less than or equal to that length are discarded. If you want no genes discarded, set `threshold` to 0.
@@ -607,8 +658,9 @@ julia> milc(EXAMPLE_DATA_PATH, ref_seqs = (self = all_genes, ribosomal = ribosom
 ```
 """
 function milc(
-    filepath::String,
+    sequences::Union{String, IO, FASTAReader, Vector{<:NucSeq}},
     dict::CodonDict = DEFAULT_CodonDict;
+    names::Union{Vector{String}, Nothing} = nothing,
     ref_seqs = (),
     rm_start = false,
     rm_stop = false,
@@ -623,18 +675,19 @@ function milc(
         deg = dict.deg
         stop_mask = fill(true, 64)
     end
-    return milc(filepath, ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold)
+    return milc(sequences, ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold, names)
 end
 
 function milc(
-    filepaths::Vector{String},
+    sequences::Union{Vector{String}, Vector{<:IO}, Vector{<:FASTAReader}, Vector{<:Vector{<:NucSeq}}},
     dict::CodonDict = DEFAULT_CodonDict;
+    names::Union{Vector{Vector{String}}, Nothing} = nothing,
     ref_seqs = (),
     rm_start = false,
     rm_stop = false,
     threshold = 80,
 )
-    len = length(filepaths)
+    len = length(sequences)
     results = Vector{Any}(undef, len)
     if rm_stop
         uniqueI = dict.uniqueI_nostops
@@ -645,38 +698,44 @@ function milc(
         deg = dict.deg
         stop_mask = fill(true, 64)
     end
-    if isempty(ref_seqs)
+    if isempty(ref_seqs) & isnothing(names)
         Threads.@threads for i = 1:len
             @inbounds results[i] =
-                milc(filepaths[i], ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold)
+                milc(sequences[i], ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold, names)
+        end
+    elseif isempty(ref_seqs)
+        Threads.@threads for i = 1:len
+            @inbounds results[i] =
+                milc(sequences[i], ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold, names[i])
+        end
+    elseif isnothing(names)
+        Threads.@threads for i = 1:len
+            @inbounds results[i] =
+                milc(sequences[i], ref_seqs[i], uniqueI, deg, stop_mask, rm_start, threshold, names)
         end
     else
         Threads.@threads for i = 1:len
-            @inbounds results[i] = milc(
-                filepaths[i],
-                ref_seqs[i],
-                uniqueI,
-                deg,
-                stop_mask,
-                rm_start,
-                threshold,
-            )
+            @inbounds results[i] =
+                milc(sequences[i], ref_seqs[i], uniqueI, deg, stop_mask, rm_start, threshold, names[i])
         end
     end
-
     return results
 end
 
 function milc(
-    fasta_seq::String,
+    fasta_seq::Union{String, IO, FASTAReader, Vector{<:NucSeq}},
     ref_seqs,
     dict_uniqueI::Vector{Vector{Int32}},
-    dict_deg::Vector{Int32},
+    dict_deg::Vector{<:Integer},
     stop_mask::Vector{Bool},
     rm_start::Bool,
     threshold::Integer,
+    names::Union{Vector{String}, Nothing},
 )
-    counts = count_codons(fasta_seq, rm_start, threshold) # Count codons in each gene 
+    counts = if typeof(fasta_seq) <: Vector{<:NucSeq}
+        count_codons(fasta_seq, names = names, remove_start = rm_start, threshold = threshold)
+    else count_codons(fasta_seq, rm_start, threshold) 
+    end # Count codons in each gene 
     @inbounds count_matrix = @views counts[1] # Count matrix 64 (codons) x n sequences
     @inbounds names = @views counts[2] # Names of each fasta sequence
     @inbounds count_matrix = count_matrix[stop_mask, :] # Remove entries if removing stop codons
@@ -712,14 +771,14 @@ end
 
 # SCUO
 """
-    scuo(filepath::String, dict::CodonDict = DEFAULT_CodonDict; rm_start = false, rm_stop = false, threshold = 80)
-    scuo(filepaths::Vector{String}, dict::CodonDict = DEFAULT_CodonDict; rm_start = false, rm_stop = false, threshold = 80)
-Calculate SCUO from Wan et al., 2004. 
+    scuo(sequences::Union{String, IO, FASTAReader, Vector{<:NucSeq}}, dict::CodonDict = DEFAULT_CodonDict; names::Union{Vector{String}, Nothing} = nothing, rm_start = false, rm_stop = false, threshold = 80)
+    scuo(sequences::Union{Vector{String}, Vector{<:IO}, Vector{<:FASTAReader}, Vector{<:Vector{<:NucSeq}}}, dict::CodonDict = DEFAULT_CodonDict; names::Union{Vector{Vector{String}}, Nothing} = nothing, rm_start = false, rm_stop = false, threshold = 80)
+Calculate SCUO from Wan et al., 2004.  
 
 # Arguments
-- `filepath`: path to fasta file of coding sequences (e.g. .fasta, .fna, .fa). There are no quality checks, so it's assumed that each entry is assumed to be an individual coding sequence, in the correct frame, without 5' or 3' untranslated regions.
-- `filepaths`: vector of paths to fasta files of coding sequences (e.g. .fasta, .fna, .fa). `CUBScout` is multithreaded; if there are multiple threads available, `CUBScout` will allocate a thread for each filepath. As such, providing a vector of paths as an argument will be faster than broadcasting across a vector of paths. Because a single file is only accessed by a single thread, it's never worth using more threads than the total number of files being analyzed. There are no quality checks, so it's assumed that each entry is an individual coding sequence, in the correct frame, without 5' or 3' untranslated regions.
+- `sequences`: DNA or RNA sequences to be analyzed, which should be coding sequences only. This can take quite a few forms depending on your use case. It can be a path to fasta file of coding sequences (e.g. .fasta, .fna, .fa), or a IO or FASTAReader pointing to these fasta files. It can also be a vector of BioSequences, if you've already brought them into Julia's environment. There are no quality checks, so it's assumed that each entry is assumed to be an individual coding sequence, in the correct frame, without 5' or 3' untranslated regions. If you are analyzing multiple genomes (or sets of sequences), `sequences` could instead be a vector of filepaths, IOStreams, FASTAReaders, or vectors of sequences, with each vector corresponding to a genome. `CUBScout` is multithreaded; if there are multiple threads available, `CUBScout` will allocate a thread for each filepath. As such, providing a vector of filepaths (or `Vector{<:Vector{<:NucSeq}}`) as an argument will be faster than broadcasting across a vector of paths. Because a single file is only accessed by a single thread, it's never worth using more threads than the total number of files being analyzed.
 - `dict`: codon dictionary of type `CodonDict`. The standard genetic code is loaded by default, but if necessary you can create your own codon dictionary using `make_CodonDict`
+- `names`: An optional vector of names for each sequence. Only relevant if providing a vector of BioSequences, as names are automatically pulled from fasta files. If `sequences` is of type `Vector{<:Vector{<:NucSeq}}`, `names` should be of type `Vector{Vector{String}}`
 - `rm_start`: whether to ignore the first codon of each sequence. Many organisms use alternative start codons such as TTG and CTG, which in other locations would generally code for leucine. There are a few approaches to deal with this. By default, `CUBScout` keeps each start codon and assigns it as though it were any other codon. Of course, this would slightly change leucine's contribution to codon usage bias. If you set `rm_start` to `true`, the first codon of every sequence is simply discarded. This will also affect the gene's length, which means it could be removed if it falls under the threshold. Other CUB packages (such as R's coRdon, alt.init = TRUE), assign all TTG and CTG codons to methionine, regardless of their location. I disagree with this approach from a biological perspective; those codons still code for leucine most of the time they are used. However, if you want matching output as you would get from coRdon, you can supply `ALTSTART_CodonDict` to the `dict` argument, and keep `rm_start` as `false`.
 - `rm_stop`: whether to remove stop codons from calculations of codon usage bias.
 - `threshold`: minimum length of a gene (in codons) to be used in codon usage bias calculations. By default this is set to 80 codons; any genes less than or equal to that length are discarded. If you want no genes discarded, set `threshold` to 0.
@@ -750,8 +809,9 @@ julia> scuo(EXAMPLE_DATA_PATH, rm_start = true); # Remove start codons
 ```
 """
 function scuo(
-    filepath::String,
+    sequences::Union{String, IO, FASTAReader, Vector{<:NucSeq}},
     dict::CodonDict = DEFAULT_CodonDict;
+    names::Union{Vector{String}, Nothing} = nothing,
     rm_start = false,
     rm_stop = false,
     threshold = 80,
@@ -765,18 +825,19 @@ function scuo(
         deg = dict.deg
         stop_mask = fill(true, 64)
     end
-    return scuo(filepath, uniqueI, deg, stop_mask, rm_start, threshold)
+    return scuo(sequences, uniqueI, deg, stop_mask, rm_start, threshold, names)
 end
 
 function scuo(
-    filepaths::Vector{String},
+    sequences::Union{Vector{String}, Vector{<:IO}, Vector{<:FASTAReader}, Vector{<:Vector{<:NucSeq}}},
     dict::CodonDict = DEFAULT_CodonDict;
+    names::Union{Vector{Vector{String}}, Nothing} = nothing,
     rm_start = false,
     rm_stop = false,
     threshold = 80,
 )
-    len = length(filepaths)
-    results = Vector{Vector{Float64}}(undef, len)
+    len = length(sequences)
+    results = Vector{Any}(undef, len)
     if rm_stop
         uniqueI = dict.uniqueI_nostops
         deg = dict.deg_nostops
@@ -786,24 +847,33 @@ function scuo(
         deg = dict.deg
         stop_mask = fill(true, 64)
     end
-    Threads.@threads for i = 1:len
-        @inbounds results[i] =
-            scuo(filepaths[i], uniqueI, deg, stop_mask, rm_start, threshold)
+    if isnothing(names)
+        Threads.@threads for i = 1:len
+            @inbounds results[i] =
+                scuo(sequences[i], uniqueI, deg, stop_mask, rm_start, threshold, names)
+        end
+    else isnothing(names)
+        Threads.@threads for i = 1:len
+            @inbounds results[i] =
+                scuo(sequences[i], uniqueI, deg, stop_mask, rm_start, threshold, names[i])
+        end
     end
-
     return results
 end
 
-
 function scuo(
-    fasta_seq::String,
+    fasta_seq::Union{String, IO, FASTAReader, Vector{<:NucSeq}},
     dict_uniqueI::Vector{Vector{Int32}},
-    dict_deg::Vector{Int32},
+    dict_deg::Vector{<:Integer},
     stop_mask::Vector{Bool},
     rm_start::Bool,
     threshold::Integer,
+    names::Union{Vector{String}, Nothing},
 )
-    counts = count_codons(fasta_seq, rm_start, threshold) # Count codons in each gene 
+    counts = if typeof(fasta_seq) <: Vector{<:NucSeq}
+        count_codons(fasta_seq, names = names, remove_start = rm_start, threshold = threshold)
+    else count_codons(fasta_seq, rm_start, threshold) 
+    end # Count codons in each gene 
     @inbounds @views count_matrix = counts[1] # This is our codon count matrix
     @inbounds @views names = counts[2] # These are the names of each sequence
     @inbounds @views count_matrix = count_matrix[stop_mask, :] # Remove entries if removing stop codons
@@ -827,15 +897,14 @@ function scuo(
 end
 
 """
-    all_cub(filepath::String, dict::CodonDict = DEFAULT_CodonDict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80)
-    all_cub(filepaths::Vector{String}, dict::CodonDict = DEFAULT_CodonDict; ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80)
+    all_cub(sequences::Union{String, IO, FASTAReader, Vector{<:NucSeq}}, dict::CodonDict = DEFAULT_CodonDict; names::Union{Vector{String}, Nothing} = nothing, ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80)
+    all_cub(sequences::Union{Vector{String}, Vector{<:IO}, Vector{<:FASTAReader}, Vector{<:Vector{<:NucSeq}}}, dict::CodonDict = DEFAULT_CodonDict; names::Union{Vector{Vector{String}}, Nothing} = nothing, ref_seqs = (), rm_start = false, rm_stop = false, threshold = 80)
 Calculate all codon usage bias measures at once. Because many measures require the same initial calculations, this is more efficient than calculating them individually.
 
 # Arguments
-- `filepath`: path to fasta file of coding sequences (e.g. .fasta, .fna, .fa). There are no quality checks, so it's assumed that each entry is assumed to be an individual coding sequence, in the correct frame, without 5' or 3' untranslated regions.
-- `filepaths`: vector of paths to fasta files of coding sequences (e.g. .fasta, .fna, .fa). `CUBScout` is multithreaded; if there are multiple threads available, `CUBScout` will allocate a thread for each filepath. As such, providing a vector of paths as an argument will be faster than broadcasting across a vector of paths. Because a single file is only accessed by a single thread, it's never worth using more threads than the total number of files being analyzed. There are no quality checks, so it's assumed that each entry is an individual coding sequence, in the correct frame, without 5' or 3' untranslated regions.
+- `sequences`: DNA or RNA sequences to be analyzed, which should be coding sequences only. This can take quite a few forms depending on your use case. It can be a path to fasta file of coding sequences (e.g. .fasta, .fna, .fa), or a IO or FASTAReader pointing to these fasta files. It can also be a vector of BioSequences, if you've already brought them into Julia's environment. There are no quality checks, so it's assumed that each entry is assumed to be an individual coding sequence, in the correct frame, without 5' or 3' untranslated regions. If you are analyzing multiple genomes (or sets of sequences), `sequences` could instead be a vector of filepaths, IOStreams, FASTAReaders, or vectors of sequences, with each vector corresponding to a genome. `CUBScout` is multithreaded; if there are multiple threads available, `CUBScout` will allocate a thread for each filepath. As such, providing a vector of filepaths (or `Vector{<:Vector{<:NucSeq}}`) as an argument will be faster than broadcasting across a vector of paths. Because a single file is only accessed by a single thread, it's never worth using more threads than the total number of files being analyzed.
 - `dict`: codon dictionary of type `CodonDict`. The standard genetic code is loaded by default, but if necessary you can create your own codon dictionary using `make_CodonDict`
-- `ref_seqs`: by default, codon usage bias for each gene is calculated using the whole genome ("self") as a reference subset. If you would like to specify your own subsets to calculate against, such as ribosomal genes, `ref_seqs` takes a named tuple in the form `("subset_name" = Bool[],)`, where `Bool[]` is the same length as the number of sequences in your fasta file, and contains `true` for sequences you want as your reference subset and false for those you don't. You can use `find_seqs()` to generate this vector. You can provide multiple reference subsets as separate entries in the named tuple, and `CUBScout` will return the calculated measure using each subset. If providing multiple filepaths and want custom reference sets, `ref_seqs` should be a vector of named tuples corresponding to the vector of filepaths.
+- `names`: An optional vector of names for each sequence. Only relevant if providing a vector of BioSequences, as names are automatically pulled from fasta files. If `sequences` is of type `Vector{<:Vector{<:NucSeq}}`, `names` should be of type `Vector{Vector{String}}`
 - `rm_start`: whether to ignore the first codon of each sequence. Many organisms use alternative start codons such as TTG and CTG, which in other locations would generally code for leucine. There are a few approaches to deal with this. By default, `CUBScout` keeps each start codon and assigns it as though it were any other codon. Of course, this would slightly change leucine's contribution to codon usage bias. If you set `rm_start` to `true`, the first codon of every sequence is simply discarded. This will also affect the gene's length, which means it could be removed if it falls under the threshold. Other CUB packages (such as R's coRdon, alt.init = TRUE), assign all TTG and CTG codons to methionine, regardless of their location. I disagree with this approach from a biological perspective; those codons still code for leucine most of the time they are used. However, if you want matching output as you would get from coRdon, you can supply `ALTSTART_CodonDict` to the `dict` argument, and keep `rm_start` as `false`.
 - `rm_stop`: whether to remove stop codons from calculations of codon usage bias.
 - `threshold`: minimum length of a gene (in codons) to be used in codon usage bias calculations. By default this is set to 80 codons; any genes less than or equal to that length are discarded. If you want no genes discarded, set `threshold` to 0.
@@ -850,8 +919,9 @@ julia> all_cub(EXAMPLE_DATA_PATH, ref_seqs = (ribosomal = ribosomal_genes,)); # 
 ```
 """
 function all_cub(
-    filepath::String,
-    dict = DEFAULT_CodonDict;
+    sequences::Union{String, IO, FASTAReader, Vector{<:NucSeq}},
+    dict::CodonDict = DEFAULT_CodonDict;
+    names::Union{Vector{String}, Nothing} = nothing,
     ref_seqs = (),
     rm_start = false,
     rm_stop = false,
@@ -866,18 +936,19 @@ function all_cub(
         deg = dict.deg
         stop_mask = fill(true, 64)
     end
-    return all_cub(filepath, ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold)
+    return all_cub(sequences, ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold, names)
 end
 
 function all_cub(
-    filepaths::Vector{String},
-    dict = DEFAULT_CodonDict;
+    sequences::Union{Vector{String}, Vector{<:IO}, Vector{<:FASTAReader}, Vector{<:Vector{<:NucSeq}}},
+    dict::CodonDict = DEFAULT_CodonDict;
+    names::Union{Vector{Vector{String}}, Nothing} = nothing,
     ref_seqs = (),
     rm_start = false,
     rm_stop = false,
     threshold = 80,
 )
-    len = length(filepaths)
+    len = length(sequences)
     results = Vector{Any}(undef, len)
     if rm_stop
         uniqueI = dict.uniqueI_nostops
@@ -888,45 +959,44 @@ function all_cub(
         deg = dict.deg
         stop_mask = fill(true, 64)
     end
-    if isempty(ref_seqs)
+    if isempty(ref_seqs) & isnothing(names)
         Threads.@threads for i = 1:len
-            @inbounds results[i] = all_cub(
-                filepaths[i],
-                ref_seqs,
-                uniqueI,
-                deg,
-                stop_mask,
-                rm_start,
-                threshold,
-            )
+            @inbounds results[i] =
+                all_cub(sequences[i], ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold, names)
+        end
+    elseif isempty(ref_seqs)
+        Threads.@threads for i = 1:len
+            @inbounds results[i] =
+                all_cub(sequences[i], ref_seqs, uniqueI, deg, stop_mask, rm_start, threshold, names[i])
+        end
+    elseif isnothing(names)
+        Threads.@threads for i = 1:len
+            @inbounds results[i] =
+                all_cub(sequences[i], ref_seqs[i], uniqueI, deg, stop_mask, rm_start, threshold, names)
         end
     else
         Threads.@threads for i = 1:len
-            @inbounds results[i] = all_cub(
-                filepaths[i],
-                ref_seqs[i],
-                uniqueI,
-                deg,
-                stop_mask,
-                rm_start,
-                threshold,
-            )
+            @inbounds results[i] =
+                all_cub(sequences[i], ref_seqs[i], uniqueI, deg, stop_mask, rm_start, threshold, names[i])
         end
     end
-
     return results
 end
 
 function all_cub(
-    fasta_seq::String,
+    fasta_seq::Union{String, IO, FASTAReader, Vector{<:NucSeq}},
     ref_seqs,
     dict_uniqueI::Vector{Vector{Int32}},
-    dict_deg::Vector{Int32},
+    dict_deg::Vector{<:Integer},
     stop_mask::Vector{Bool},
     rm_start::Bool,
     threshold::Integer,
+    names::Union{Vector{String}, Nothing},
 )
-    counts = count_codons(fasta_seq, rm_start, threshold) # Count codons in each gene 
+    counts = if typeof(fasta_seq) <: Vector{<:NucSeq}
+        count_codons(fasta_seq, names = names, remove_start = rm_start, threshold = threshold)
+    else count_codons(fasta_seq, rm_start, threshold) 
+    end # Count codons in each gene 
     @inbounds @views count_matrix = counts[1] # This is our codon count matrix
     @inbounds @views seqnames = counts[2] # These are our sequence names
     @inbounds @views count_matrix = count_matrix[stop_mask, :] # Remove entries if removing stop codons

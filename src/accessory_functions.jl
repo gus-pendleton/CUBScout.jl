@@ -13,7 +13,7 @@ const TABLE = let
     Tuple(table)
 end
 
-function count_codons!(vector::AbstractVector{<:Integer}, seq::AbstractString, rem)
+function count_codons!(vector::AbstractVector{<:Integer}, seq::AbstractString, rem::Integer)
     fill!(vector, 0)
     mask = UInt(1 << 6 - 1)
     remaining = rem
@@ -35,8 +35,41 @@ function count_codons!(vector::AbstractVector{<:Integer}, seq::AbstractString, r
     end
 end
 
+"""
+    count_codons(path::AbstractString, remove_start::Bool = false, threshold::Integer = 0)
+    count_codons(stream::IO, remove_start::Bool = false, threshold::Integer = 0)
+    count_codons(reader::FASTAReader, remove_start::Bool = false, threshold::Integer = 0)
+    count_codons(sequences::Vector{<:NucSeq}, names::Vector{String} = String[], remove_start::Bool = false, threshold::Integer = 0)
+    count_codons(sequence::NucSeq, remove_start::Bool = false, threshold::Integer = 0)
+Read a fasta file or BioSequence and return the occurence of each codon for each gene or sequence.
 
-function count_codons(reader::FASTAReader, remove_start, threshold)
+# Arguments
+- `path` or `stream` or `reader` or `sequence(s)`: Fasta sequence to analyze. This can be a path to a fasta file of sequences, an IOStream, an open FASTAReader, or a BioSequences nucleotide sequence, or a vector of nucleotide sequences. Note that count_codons isn't identifying ORFs - make sure these are actual CDSs in frame.
+- `remove_start`: Whether to ignore the initial start codon
+- `threshold`: Minimum length of the sequence *in codons* to be returned in the results.
+
+# Output
+If providing a single sequence, the result will be a 64x1 Matrix, which corresponds to the 64 codons in alphabetical order. If you want a list of the codons in alphabetical order, this is stored in `CUBScout.DEFAULT_CodonDict.codons`. If analyzing a fasta file or a vector of sequences, the result will be a tuple. The first element of the tuple is a 64xn matrix, where n = # of sequences above the threshold. The second element is a list of corresponding names for each column. The third element is a Boolean vector where `true` corresponds to sequences which did pass the threshold, and `false` is sequences which did not pass the threshold and so are not included in the results matrix. Names are pulled from fasta files and IO streams by default; if you would like to provide a vector of IDs or names when providing a `Vector{<:NucSeq}`, you can.
+
+# Examples
+```jldoctest
+julia> example_dna = dna"ATGAAAATGAACTTTTGA"
+
+julia> count_codons(example_dna) |> first
+1
+
+julia> result = count_codons(EXAMPLE_DATA_PATH);
+
+julia> first(result[1], 5)
+5-element Vector{Int32}:
+ 32
+  7
+  6
+ 14
+ 11
+```
+"""
+function count_codons(reader::FASTAReader, remove_start::Bool = false, threshold::Integer = 0)
     buffer = zeros(Int, 64)
     result = Int32[]
     names = String[]
@@ -54,18 +87,25 @@ function count_codons(reader::FASTAReader, remove_start, threshold)
     @inbounds (reshape(result, 64, :), names, length_passes)
 end
 
-function count_codons(path::AbstractString, remove_start, threshold)
+function count_codons(path::AbstractString, remove_start::Bool = false, threshold::Integer = 0)
     open(FASTAReader, path; copy = false) do reader
         count_codons(reader, remove_start, threshold)
     end
 end
 
+function count_codons(stream::IO, remove_start::Bool = false, threshold::Integer = 0)
+    FASTAReader(stream) do reader
+        count_codons(reader, remove_start, threshold)
+    end
+end
+
+
 # Counting codons for BioSequences
-function count_codons(seq::NucSeq, remove_start::Bool)
+function count_codons(sequence::NucSeq, remove_start::Bool = false)
     cod_space = zeros(Int, (4,4,4)) 
     remaining = remove_start ? 6 : 3
     index = Int8[0,0,0]
-    for nuc in seq
+    for nuc in sequence
         if remaining > 3 
             remaining -= 1
             continue
@@ -85,7 +125,7 @@ function count_codons(seq::NucSeq, remove_start::Bool)
     return @inbounds @views reshape(cod_space, 64, 1)
 end
 
-function count_codons!(cod_array::AbstractArray{<:Integer}, index::AbstractArray{<:Integer}, seq::NucSeq, rem)
+function count_codons!(cod_array::AbstractArray{<:Integer}, index::AbstractArray{<:Integer}, seq::NucSeq, rem::Integer)
     fill!(cod_array, 0)
     remaining = rem
     for nuc in seq
@@ -110,13 +150,13 @@ end
 
 
 
-function count_codons(sequence::Vector{<:NucSeq}, remove_start::Bool, threshold::Integer)
+function count_codons(sequences::Vector{<:NucSeq}; names::Union{Vector{String}, Nothing} = nothing, remove_start::Bool = false, threshold::Integer = 0)
     buffer = zeros(Int, (4,4,4))
     i_array = zeros(Int, 3)
     result = Int32[]
     length_passes = Bool[]
     rem = remove_start ? 6 : 3
-    for cds in sequence
+    for cds in sequences
         count_codons!(buffer, i_array, cds, rem)
         length_pass = sum(buffer) > threshold
         push!(length_passes, length_pass)
@@ -124,7 +164,8 @@ function count_codons(sequence::Vector{<:NucSeq}, remove_start::Bool, threshold:
             @inbounds append!(result, buffer)
         end
     end
-    @inbounds (reshape(result, 64, :), length_passes)
+    name_vec = @inbounds @views isnothing(names) ? nothing : names[length_passes]
+    @inbounds (reshape(result, 64, :), name_vec, length_passes)
 end
 
 function countsbyAA(count_matrix, dict_uniqueI)
@@ -304,8 +345,38 @@ end
 nanmean(x) = mean(filter(!isnan, x))
 nanmean(x, y) = mapslices(nanmean, x, dims = y)
 
+"""
+    codon_frequency(codon_counts::Matrix{<:Integer}, form::String, dict::CodonDict = DEFAULT_CodonDict)
+Calculate codon frequency from a matrix of codon counts. Accepts as its first argument a `Matrix{<:Integer}` which is a product of `count_codons()`. `form` can be one of four options:
+-`net_genomic`: Frequency of each codon across entire genome (matrix).
+-`net_gene`: Frequency of each codon within each gene (column).
+-`byAA_genomic`: Frequency of each codon within each amino acid across the entire genome (matrix).
+-`byAA_gene`: Frequency of each codon within each amino acid within each gene (column). 
 
-function codon_frequency(codon_counts::Matrix{<:Integer}, dict::CodonDict, form::String)
+If using an alternative genetic code, a custom `CodonDict` can be provided.
+
+# Examples
+```jldoctest
+julia> codon_counts = count_codons(EXAMPLE_DATA_PATH);
+
+julia> count_matrix = codon_counts[1];
+
+julia> julia> codon_frequency(count_matrix, "net_genomic")[1:5]
+5-element Vector{Float64}:
+ 0.04941242971710299
+ 0.017114892645228374
+ 0.021009352696846777
+ 0.022269444158755328
+ 0.022257296747490142
+
+julia> codon_frequency(count_matrix, "net_genomic") |> size
+(64, 1)
+
+julia> codon_frequency(count_matrix, "net_gene") |> size
+ (64, 4237)
+```
+"""
+function codon_frequency(codon_counts::Matrix{<:Integer}, form::String, dict::CodonDict = DEFAULT_CodonDict)
     form in ("net_genomic", "byAA_genomic", "net_gene", "byAA_gene") || error("""Invalid form. Please provide. Acceptable forms include "net_genomic", "byAA_genomic", "net_gene", or "byAA_gene".""")
     if form == "net_genomic"
         return @views sum(codon_counts, dims = 2) ./ sum(codon_counts)
@@ -319,10 +390,12 @@ function codon_frequency(codon_counts::Matrix{<:Integer}, dict::CodonDict, form:
     else
         countAA = countsbyAA(codon_counts, dict.uniqueI)
         if form == "byAA_genomic"
-            return normTotalFreq(codon_counts, countAA, dict.uniqueI)
+            freq = normTotalFreq(codon_counts, countAA, dict.uniqueI)
+            return @views remove_nan.(freq, 0)
         end
         seqs = @views size(codon_counts, 2) 
-        return normFrequency(codon_counts, countAA, seqs, dict.uniqueI)
+        freq = normFrequency(codon_counts, countAA, seqs, dict.uniqueI)
+        return @views remove_nan.(freq, 0)
     end
 
 end

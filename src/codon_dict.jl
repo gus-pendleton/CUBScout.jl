@@ -83,3 +83,4 @@ const ALTSTART_CodonDict =
 The path to an example dataset, stored as an artifact within the package. This is an .fna file containing coding sequences from Bacillus subtilis subsp. subtilis str. 168, NCBI Accession # NC_000964.3.
 """
 const EXAMPLE_DATA_PATH = joinpath(artifact"example_genome", "B_subtilis.fna")
+

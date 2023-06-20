@@ -12,4 +12,10 @@ using Test
     @test isapprox(cai(EXAMPLE_DATA_PATH, ribosomal_genes).CAI[1], 0.8449667854)
     @test isapprox(fop(EXAMPLE_DATA_PATH, ribosomal_genes).FOP[1], 0.567816092)
     @test isapprox(gcb(EXAMPLE_DATA_PATH).GCB[1], -0.0587654329)
+    codon_counts = count_codons(EXAMPLE_DATA_PATH);
+    @test isapprox(codon_frequency(codon_counts[1], "net_genomic")[1],  0.04941242971710299)
+    @test isapprox(codon_frequency(codon_counts[1], "net_gene")[1],  0.07158836689038031)
+    @test isapprox(codon_frequency(codon_counts[1], "byAA_gene")[1],  0.8421052631578947)
+    @test isapprox(codon_frequency(codon_counts[1], "byAA_genomic")[1],  0.7016640025759265)
+
 end
