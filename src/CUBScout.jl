@@ -2,7 +2,7 @@ module CUBScout
 
 using FASTX: FASTAReader, sequence, identifier, description
 using DelimitedFiles: readdlm
-using BioSequences: BioSequences, LongDNA, NucSeq, encoded_data, @dna_str
+using BioSequences: BioSequences, LongDNA, NucSeq, encoded_data, @dna_str, @rna_str
 using Artifacts
 using Statistics: mean
 

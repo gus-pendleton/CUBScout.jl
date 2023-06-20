@@ -361,7 +361,7 @@ julia> codon_counts = count_codons(EXAMPLE_DATA_PATH);
 
 julia> count_matrix = codon_counts[1];
 
-julia> julia> codon_frequency(count_matrix, "net_genomic")[1:5]
+julia> codon_frequency(count_matrix, "net_genomic")[1:5]
 5-element Vector{Float64}:
  0.04941242971710299
  0.017114892645228374
