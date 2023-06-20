@@ -53,7 +53,7 @@ If providing a single sequence, the result will be a 64x1 Matrix, which correspo
 
 # Examples
 ```jldoctest
-julia> example_dna = dna"ATGAAAATGAACTTTTGA"
+julia> example_dna = BioSequences.dna"ATGAAAATGAACTTTTGA"
 
 julia> count_codons(example_dna) |> first
 1
