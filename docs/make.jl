@@ -1,5 +1,6 @@
 using CUBScout
 using Documenter
+using BioSequences: @dna_str
 
 DocMeta.setdocmeta!(CUBScout, :DocTestSetup, :(using CUBScout); recursive = true)
 
