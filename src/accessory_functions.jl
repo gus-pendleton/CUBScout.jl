@@ -56,6 +56,8 @@ If providing a single sequence, the result will be a 64x1 Matrix, which correspo
 julia> using BioSequences: @dna_str
 
 julia> example_dna = dna"ATGAAAATGAACTTTTGA"
+18nt DNA Sequence:
+ATGAAAATGAACTTTTGA
 
 julia> count_codons(example_dna) |> first
 1
