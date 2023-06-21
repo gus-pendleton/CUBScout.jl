@@ -17,6 +17,8 @@ makedocs(;
     ),
     pages = [
         "Introduction" => "index.md",
+        "Inputs" => "inputs.md",
+        "Counting Codons" => "codons.md",
         "Codon Usage Bias" => "cub.md",
         "Expressivity Prediction" => "exp.md",
         "Functions" => "functions.md",
