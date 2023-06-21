@@ -240,7 +240,7 @@ function enc(
             @inbounds results[i] =
                 enc(sequences[i], uniqueI, deg, stop_mask, rm_start, threshold, names)
         end
-    else isnothing(names)
+    else
         Threads.@threads for i = 1:len
             @inbounds results[i] =
                 enc(sequences[i], uniqueI, deg, stop_mask, rm_start, threshold, names[i])
@@ -852,7 +852,7 @@ function scuo(
             @inbounds results[i] =
                 scuo(sequences[i], uniqueI, deg, stop_mask, rm_start, threshold, names)
         end
-    else isnothing(names)
+    else
         Threads.@threads for i = 1:len
             @inbounds results[i] =
                 scuo(sequences[i], uniqueI, deg, stop_mask, rm_start, threshold, names[i])
