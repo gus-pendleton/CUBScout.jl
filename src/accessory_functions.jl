@@ -274,7 +274,9 @@ end
 
 """
     find_seqs(path::AbstractString, match_pattern::Regex)
-Read a fasta file at `path` and query the *description* field for a given Regex `match_pattern`. These results can be supplied in either the reference tuples (for codon usage bias functions) or reference vectors (for expressivity measures).
+    find_seqs(stream::IO, match_pattern::Regex)
+    find_seqs(reader::FASTAReader, match_pattern::Regex)
+Read a fasta file at `path` (or `reader` or `IO` which points to a fasta file) and query the *description* field for a given Regex `match_pattern`. These results can be supplied in either the reference tuples (for codon usage bias functions) or reference vectors (for expressivity measures).
 
 # Examples
 ```jldoctest
@@ -297,8 +299,28 @@ function find_seqs(path::AbstractString, match_pattern::Regex)
     end
 end
 
+function find_seqs(reader::FASTAReader, match_pattern::Regex)
+        match_vector = Bool[]
+        for record in reader
+            @inbounds push!(match_vector, occursin(match_pattern, description(record)))
+        end
+        return match_vector
+end
+
+function find_seqs(stream::IO, match_pattern::Regex)
+    match_vector = Bool[]
+    FASTAReader(stream) do reader
+    for record in reader
+        @inbounds push!(match_vector, occursin(match_pattern, description(record)))
+    end
+end
+    return match_vector
+end
+
 """
     seq_names(path::AbstractString)
+    seq_names(reader::FASTAReader)
+    seq_names(stream::IO)
 Read a fasta file at `path` and return the *name* fields. Just adds convenience on top of FASTX functions.
 
 # Examples
@@ -319,8 +341,28 @@ function seq_names(path::AbstractString)
     end
 end
 
+function seq_names(reader::FASTAReader)
+    name_vector = String[]
+    for record in reader
+        @inbounds push!(name_vector, identifier(record))
+    end
+    return name_vector
+end
+
+function seq_names(stream::IO)
+FASTAReader(stream) do reader
+    name_vector = String[]
+    for record in reader
+        @inbounds push!(name_vector, identifier(record))
+    end
+    return name_vector
+end
+end
+
 """
     seq_descriptions(path::AbstractString)
+    seq_descriptions(reader::FASTAReader)
+    seq_descriptions(stream::IO)
 Read a fasta file at `path` and return the *description* fields. Just adds convenience on top of FASTX functions.
 
 # Examples
@@ -333,6 +375,24 @@ julia> seq_descr[1]
 """
 function seq_descriptions(path::AbstractString)
     open(FASTAReader, path; copy = false) do reader
+        desc_vector = String[]
+        for record in reader
+            @inbounds push!(desc_vector, description(record))
+        end
+        return desc_vector
+    end
+end
+
+function seq_descriptions(reader::FASTAReader)
+        desc_vector = String[]
+        for record in reader
+            @inbounds push!(desc_vector, description(record))
+        end
+        return desc_vector
+end
+
+function seq_descriptions(stream::IO)
+    FASTAReader(stream) do reader
         desc_vector = String[]
         for record in reader
             @inbounds push!(desc_vector, description(record))
