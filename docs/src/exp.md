@@ -4,7 +4,7 @@
 
 Expressivity predictions based on codon usage bias can be calculated with the functions `cai()`, `e()`, `fop()`, `gcb()`, and `melp()`. All expressivity functions (besides `gcb`) require two arguments:
 
-- `filepath(s)`: `String` or `Vector{String}` of filepaths to fasta file(s)
+- `sequences`: DNA or RNA sequences to be analyzed, which should be coding sequences only. This can take quite a few forms depending on your use case. It can be a path to fasta file of coding sequences (e.g. .fasta, .fna, .fa), or a IO or FASTAReader pointing to these fasta files. It can also be a vector of BioSequences, if you've already brought them into Julia's environment.  If you are analyzing multiple genomes (or sets of sequences), `sequences` could instead be a vector of filepaths, IOStreams, FASTAReaders, or vectors of BioSequences, with each vector corresponding to a genome.
 - `ref_vector(s)`: `Vector{Bool}` or `Vector{Vector{Bool}}` identifying reference subsets for each file.
 
 !!! note "Why do expressivity functions accept reference subsets in a different format than codon usage bias functions?"

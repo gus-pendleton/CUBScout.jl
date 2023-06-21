@@ -3,7 +3,7 @@
 
 ## Under default parameters
 
-Codon usage bias can be calculated using the functions `b()`, `enc()`, `enc_p()`, `mcb()`, `milc()` and `scuo()`. At their simplest, these functions accept a string which is the filepath to a fasta-formatted file of coding sequences. The output is a vector giving the codon usage bias of each coding sequence in the fasta file. 
+Codon usage bias can be calculated using the functions `b()`, `enc()`, `enc_p()`, `mcb()`, `milc()` and `scuo()`. These functions accept fasta-formatted files or vectors of BioSequences. If analyzing fasta files, these functions can accept filepaths as a string, an open IO, or an open FASTAReader. If providing a vector of BioSequences, the sequence can use either DNA or RNA alphabets. The output is a vector giving the codon usage bias of each coding sequence in the fasta file. 
 
 !!! warning
 
@@ -318,9 +318,13 @@ julia> length(b_result_300.self)
 1650
 ```
 
+### `names`
+
+If providing a vector of BioSequences, `CUBScout` won't be able to provide identifiers for codon usage bias results. As such, you can optionally provide a vector of identifiers as an argument, and so you can link results to the original input sequences. 
+
 ## Analyzing Multiple Files
 
-Often, you might have a directory containing multiple .fna files, each of which you want to analyze. You can provide a vector of filepaths to any `CUBScout` function, which will return a vector of results. If supplying `ref_seqs`, provide a vector of named tuples corresponding to each file. `CUBScout` is multi-threaded, and if Julia is started with multiple threads, will assign individual threads to process individual files. This means you *should not broadcast* `CUBScout` functions as it will reduce efficiency. Also each file is only ever processed by a single thread, so using more threads than you have files is unnecessary. 
+Often, you might have a directory containing multiple .fna files, each of which you want to analyze. You can provide a vector of filepaths (or FASTAReaders, or IOStreams) to any `CUBScout` function, which will return a vector of results. If using BioSequences, each vector of sequences is considered a genome; if you provide a `Vector{<:Vector{<:NucSeq}}`, this will function the same as providing multiple filepaths. If supplying `ref_seqs`, provide a vector of named tuples corresponding to each file. The same goes for providing `names` - provide a `Vector{Vector{String}}` where each vector of names corresponds to each vector of Biosequences. `CUBScout` is multi-threaded, and if Julia is started with multiple threads, will assign individual threads to process individual files. This means you *should not broadcast* `CUBScout` codon usage bias functions as it will reduce efficiency. Also each file is only ever processed by a single thread, so using more threads than you have files is unnecessary. 
 
 ```julia-repl
 julia> enc_p([EXAMPLE_DATA_PATH,EXAMPLE_DATA_PATH])
