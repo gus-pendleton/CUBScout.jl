@@ -1,3 +1,4 @@
 [deps]
 CUBScout = "5bb2324b-4f8a-4227-8185-e835854b0a1e"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+BioSequences = "7e6ae17a-c86d-528c-b3b9-7f778a29fe59"
