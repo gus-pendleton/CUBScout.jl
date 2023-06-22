@@ -320,7 +320,7 @@ julia> length(b_result_300.self)
 
 ### `names`
 
-If providing a vector of BioSequences, `CUBScout` won't be able to provide identifiers for codon usage bias results. As such, you can optionally provide a vector of identifiers as an argument, and so you can link results to the original input sequences. 
+If providing a vector of BioSequences, `CUBScout` won't be able to provide identifiers for codon usage bias results. As such, you can optionally provide a vector of identifiers as an argument, so you can link results to the original input sequences. 
 
 ## Analyzing Multiple Files
 
