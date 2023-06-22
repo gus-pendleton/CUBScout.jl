@@ -1,7 +1,7 @@
 name = "CUBScout"
 uuid = "5bb2324b-4f8a-4227-8185-e835854b0a1e"
 authors = ["Augustus Pendleton"]
-version = "1.0.0-DEV"
+version = "1.0.0"
 
 [deps]
 ArtifactUtils = "8b73e784-e7d8-4ea5-973d-377fed4e3bce"
