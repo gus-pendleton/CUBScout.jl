@@ -26,4 +26,6 @@ makedocs(;
     ],
 )
 
-deploydocs(; repo = "github.com/gus-pendleton/CUBScout.jl", devbranch = "main")
+deploydocs(; repo = "github.com/gus-pendleton/CUBScout.jl", devbranch = "main", 
+devurl = "dev",
+versions = ["stable" => "v1.0.0", devurl => devurl])
